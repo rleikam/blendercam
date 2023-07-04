@@ -1018,36 +1018,29 @@ def curveToChunks(o, use_modifiers=False):
 
     return chunks
 
-
-def shapelyToChunks(p, zlevel):  #
+def shapelyToChunks(polygon, zlevel):  #
     chunks = []
-    # p=sortContours(p)
-    seq = polygon_utils_cam.shapelyToCoords(p)
-    i = 0
-    for s in seq:
-        # progress(p[i])
-        if len(s) > 1:
-            chunk = camPathChunk([])
-            if len(s) == 2:
-                sgeometry.LineString(s)
-            else:
-                chunk.poly = spolygon.Polygon(
-                    s)  # this should maybe be LineString? but for sorting, we need polygon inside functions.
-            for v in s:
-                # progress (v)
-                # print(v)
-                if p.has_z:
-                    chunk.points.append((v[0], v[1], v[2]))
-                else:
-                    chunk.points.append((v[0], v[1], zlevel))
 
-            # chunk.points.append((chunk.points[0][0],chunk.points[0][1],chunk.points[0][2]))#last point =first point
-            if chunk.points[0] == chunk.points[-1] and len(s) > 2:
+    sequence = polygon_utils_cam.shapelyToCoords(polygon)
+    for sequenceItem in sequence:
+
+        if len(sequenceItem) > 1:
+            chunk = camPathChunk([])
+            if len(sequenceItem) == 2:
+                sgeometry.LineString(sequenceItem)
+            else:
+                chunk.poly = spolygon.Polygon(sequenceItem) 
+            for point in sequenceItem:
+                if polygon.has_z:
+                    chunk.points.append((point[0], point[1], point[2]))
+                else:
+                    chunk.points.append((point[0], point[1], zlevel))
+
+            if chunk.points[0] == chunk.points[-1] and len(sequenceItem) > 2:
                 chunk.closed = True
             chunks.append(chunk)
-        i += 1
-    chunks.reverse()  # this is for smaller shapes first.
-    #
+    chunks.reverse()
+
     return chunks
 
 

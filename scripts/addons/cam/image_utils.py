@@ -1042,7 +1042,7 @@ def renderSampleImage(o):
     simple.progress('getting zbuffer')
     # print(o.zbuffer_image)
 
-    if o.geometry_source == 'OBJECT' or o.geometry_source == 'COLLECTION':
+    if o.geometry_source in ["OBJECT", "COLLECTION"]:
         pixsize = o.optimisation.pixsize
 
         sx = o.max.x - o.min.x

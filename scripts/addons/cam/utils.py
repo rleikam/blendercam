@@ -61,22 +61,22 @@ def update_material(self, context):
     addMaterialAreaObject()
 
 def update_operation(self, context):
-    from . import updateRest
+    from .blender.property.callback import updateRest
     active_op = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
     updateRest(active_op, bpy.context)
 
 def update_exact_mode(self, context):
-    from . import updateExact
+    from .blender.property.callback import updateExact
     active_op = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
     updateExact(active_op, bpy.context)
 
 def update_opencamlib(self, context):
-    from . import updateOpencamlib
+    from .blender.property.callback import updateOpencamlib
     active_op = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
     updateOpencamlib(active_op, bpy.context)
 
 def update_zbuffer_image(self, context):
-    from . import updateZbufferImage
+    from .blender.property.callback import updateZbufferImage
     active_op = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
     updateZbufferImage(active_op, bpy.context)
 
@@ -885,27 +885,20 @@ def curveToShapely(cob, use_modifiers=False):
     polys = chunksToShapely(chunks)
     return polys
 
-
 # separate function in blender, so you can offset any curve.
 # FIXME: same algorithms as the cutout strategy, because that is hierarchy-respecting.
 
 def silhoueteOffset(context, offset, style=1, mitrelimit=1.0):
     bpy.context.scene.cursor.location = (0, 0, 0)
-    ob = bpy.context.active_object
-    if ob.type == 'CURVE' or ob.type == 'FONT':
-        silhs = curveToShapely(ob)
+    object = context
+    if object.type == 'CURVE' or object.type == 'FONT':
+        silhouette = curveToShapely(object)
     else:
-        silhs = getObjectSilhouete('OBJECTS', [ob])
+        silhouette = getObjectSilhouete('OBJECTS', [object])
 
-    polys = []
-    mp = shapely.ops.unary_union(silhs)
-    print("offset attributes:")
-    print(offset, style)
-    mp = mp.buffer(offset, cap_style=1, join_style=style, resolution=16, mitre_limit=mitrelimit)
-    shapelyToCurve(ob.name + '_offset_' + str(round(offset, 5)), mp, ob.location.z)
-
-    return {'FINISHED'}
-
+    multiPolygon = shapely.ops.unary_union(silhouette)
+    multiPolygon = multiPolygon.buffer(offset, cap_style=1, join_style=style, resolution=16, mitre_limit=mitrelimit)
+    return shapelyToCurve(f"{object.name} _offset_  {round(offset, 5)}", multiPolygon, object.location.z)
 
 def polygonBoolean(context, boolean_type):
     bpy.context.scene.cursor.location = (0, 0, 0)
@@ -1201,15 +1194,12 @@ def getOperationSilhouete(operation):
         uses image thresholding for everything except curves.
     """
     if operation.update_silhouete_tag:
-        image = None
-        objects = None
-        if operation.geometry_source == 'OBJECT' or operation.geometry_source == 'COLLECTION':
+        stype = "IMAGE"
+        if operation.geometry_source in ["OBJECT", "COLLECTION"]:
             if not operation.onlycurves:
                 stype = 'OBJECTS'
             else:
                 stype = 'CURVES'
-        else:
-            stype = 'IMAGE'
 
         totfaces = 0
         if stype == 'OBJECTS':
@@ -1245,30 +1235,30 @@ def getObjectSilhouete(stype, objects=None, use_modifiers=False):
     # o=operation
     if stype == 'CURVES':  # curve conversion to polygon format
         allchunks = []
-        for ob in objects:
-            chunks = curveToChunks(ob)
+        for object in objects:
+            chunks = curveToChunks(object)
             allchunks.extend(chunks)
         silhouete = chunksToShapely(allchunks)
 
     elif stype == 'OBJECTS':
         totfaces = 0
-        for ob in objects:
-            totfaces += len(ob.data.polygons)
+        for object in objects:
+            totfaces += len(object.data.polygons)
 
         if totfaces < 20000000:  # boolean polygons method originaly was 20 000 poly limit, now limitless,
             # it might become teribly slow, but who cares?
-            t = time.time()
+            expiredTime = time.time()
             print('shapely getting silhouette')
             polys = []
-            for ob in objects:
+            for object in objects:
                 if use_modifiers:
-                    ob = ob.evaluated_get(bpy.context.evaluated_depsgraph_get())
-                    m = ob.to_mesh()
+                    object = object.evaluated_get(bpy.context.evaluated_depsgraph_get())
+                    m = object.to_mesh()
                 else:
-                    m = ob.data
-                mw = ob.matrix_world
+                    m = object.data
+                mw = object.matrix_world
                 mwi = mw.inverted()
-                r = ob.rotation_euler
+                r = object.rotation_euler
                 m.calc_loop_triangles()
                 id = 0
                 e = 0.000001
@@ -1311,9 +1301,9 @@ def getObjectSilhouete(stype, objects=None, use_modifiers=False):
                 print('joining')
                 p = sops.unary_union(bigshapes)
 
-            print(time.time() - t)
+            print(time.time() - expiredTime)
 
-            t = time.time()
+            expiredTime = time.time()
             silhouete = [p]  # [polygon_utils_cam.Shapely2Polygon(p)]
 
     return silhouete
@@ -1419,9 +1409,14 @@ def addOrientationObject(o):
 
 # def addCutterOrientationObject(o):
 
+def getCAMPathObjectNameConventionFrom(name):
+    return f"CAMPath_{name}"
 
-def removeOrientationObject(o):  # not working
-    name = o.name + ' orientation'
+def getCAMSimulationObjectNameConventionFrom(name):
+    return f"CAMSimulation_{name}"
+
+def removeOrientationObject(object):  # not working
+    name = f"{object.name} orientation"
     if bpy.context.scene.objects.find(name) > -1:
         ob = bpy.context.scene.objects[name]
         delob(ob)
@@ -1443,22 +1438,21 @@ def addTranspMat(ob, mname, color, alpha):
 
 
 def addMachineAreaObject():
-    s = bpy.context.scene
-    ao = bpy.context.active_object
-    if s.objects.get('CAM_machine') is not None:
-        o = s.objects['CAM_machine']
+    scene = bpy.context.scene
+    if scene.objects.get('CAM_machine') is not None:
+        object = scene.objects['CAM_machine']
     else:
-        oldunits = s.unit_settings.system
-        oldLengthUnit = s.unit_settings.length_unit
+        oldunits = scene.unit_settings.system
+        oldLengthUnit = scene.unit_settings.length_unit
         # need to be in metric units when adding machine mesh object
         # in order for location to work properly
-        s.unit_settings.system = 'METRIC'
+        scene.unit_settings.system = 'METRIC'
         bpy.ops.mesh.primitive_cube_add(align='WORLD', enter_editmode=False, location=(1, 1, -1), rotation=(0, 0, 0))
-        o = bpy.context.active_object
-        o.name = 'CAM_machine'
-        o.data.name = 'CAM_machine'
+        object = bpy.context.active_object
+        object.name = 'CAM_machine'
+        object.data.name = 'CAM_machine'
         bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
-        # o.type = 'SOLID'
+
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.delete(type='ONLY_FACE')
         bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='EDGE', action='TOGGLE')
@@ -1470,52 +1464,110 @@ def addMachineAreaObject():
         bpy.ops.mesh.primitive_cube_add(align='WORLD', enter_editmode=False, location=(1, 1, -1), rotation=(0, 0, 0))
 
         bpy.ops.object.editmode_toggle()
-        # addTranspMat(o, "violet_transparent", (0.800000, 0.530886, 0.725165), 0.1)
-        o.display_type = 'BOUNDS'
-        o.hide_render = True
-        o.hide_select = True
-        # o.select = False
-        s.unit_settings.system = oldunits
-        s.unit_settings.length_unit = oldLengthUnit
+        object.display_type = 'BOUNDS'
+        object.hide_render = True
+        object.hide_select = True
+        scene.unit_settings.system = oldunits
+        scene.unit_settings.length_unit = oldLengthUnit
 
-    # bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+    camRootCollection = getCAMRootCollection()
+    reassignObjectsToCollection([object], camRootCollection)
 
-    o.dimensions = bpy.context.scene.cam_machine.working_area
-    if ao is not None:
-        ao.select_set(True)
-    # else:
-    #     bpy.context.scene.objects.active = None
+    activeObject = bpy.context.active_object
+    object.dimensions = bpy.context.scene.cam_machine.working_area
+    if activeObject is not None:
+        activeObject.select_set(True)
+
+def reassignObjectsToCollection(objects, targetCollection):
+
+    for object in objects:
+        for collection in object.users_collection:
+            collection.objects.unlink(object)
+    
+        targetCollection.objects.link(object)
+
+def reassignCollectionsToCollection(collections, targetCollection):
+
+    childrenCollectionNames = [collection.name for collection in collections]
+
+    potentialParentCollections = list([collection for collection in bpy.data.collections if collection.name not in childrenCollectionNames])
+    potentialParentCollections.append(bpy.context.scene.collection)
+
+    for parentCollection in potentialParentCollections:
+        childrenCollections = parentCollection.children
+        for childCollection in collections:
+
+            foundChildCollection = childrenCollections.get(childCollection.name)
+
+            if foundChildCollection != None:
+                childrenCollections.unlink(childCollection)
+
+    for collection in collections:
+        targetCollection.children.link(collection)
+
+def createCollectionIfNotExists(collectionName):
+    collection = bpy.data.collections.get(collectionName, None)
+
+    if collection == None:
+        collection = bpy.data.collections.new(collectionName)
+        bpy.context.scene.collection.children.link(collection)
+
+    return collection
+
+def getCAMPathCollection():
+    camPathCollectionName = "CAMPaths"
+    camPathCollection = createCollectionIfNotExists(camPathCollectionName)
+
+    camRootCollection = getCAMRootCollection()
+    reassignCollectionsToCollection([camPathCollection], camRootCollection)
+    return camPathCollection
+
+def getCAMSimulationCollection():
+    camSimulationCollectionName = "CAMSimulations"
+    camSimulationCollection = createCollectionIfNotExists(camSimulationCollectionName)
+
+    camRootCollection = getCAMRootCollection()
+    reassignCollectionsToCollection([camSimulationCollection], camRootCollection)
+    return camSimulationCollection
+
+def getCAMRootCollection():
+    rootCollectioName = "CAMRoot"
+    rootCollection = createCollectionIfNotExists(rootCollectioName)
+    return rootCollection
 
 def addMaterialAreaObject():
-    s = bpy.context.scene
-    operation = s.cam_operations[s.cam_active_operation]
+    scene = bpy.context.scene
+    operation = scene.cam_operations[scene.cam_active_operation]
     getOperationSources(operation)
     getBounds(operation)
 
-    ao = bpy.context.active_object
-    if s.objects.get('CAM_material') is not None:
-        o = s.objects['CAM_material']
+    activeObject = bpy.context.active_object
+    if scene.objects.get('CAM_material') is not None:
+        object = scene.objects['CAM_material']
     else:
         bpy.ops.mesh.primitive_cube_add(align='WORLD', enter_editmode=False, location=(1, 1, -1), rotation=(0, 0, 0))
-        o = bpy.context.active_object
-        o.name = 'CAM_material'
-        o.data.name = 'CAM_material'
+        object = bpy.context.active_object
+        object.name = 'CAM_material'
+        object.data.name = 'CAM_material'
         bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
 
         # addTranspMat(o, 'blue_transparent', (0.458695, 0.794658, 0.8), 0.1)
-        o.display_type = 'BOUNDS'
-        o.hide_render = True
-        o.hide_select = True
-        o.select_set(state=True, view_layer=None)
+        object.display_type = 'BOUNDS'
+        object.hide_render = True
+        object.hide_select = True
+        object.select_set(state=True, view_layer=None)
     # bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
-    o.dimensions = bpy.context.scene.cam_machine.working_area
+    camRootCollection = getCAMRootCollection()
+    reassignObjectsToCollection([object], camRootCollection)
 
-    o.dimensions = (
+    object.dimensions = bpy.context.scene.cam_machine.working_area
+
+    object.dimensions = (
         operation.max.x - operation.min.x, operation.max.y - operation.min.y, operation.max.z - operation.min.z)
-    o.location = (operation.min.x, operation.min.y, operation.max.z)
-    if ao is not None:
-        ao.select_set(True)
+    object.location = (operation.min.x, operation.min.y, operation.max.z)
+    if activeObject is not None:
+        activeObject.select_set(True)
     # else:
     #     bpy.context.scene.objects.active = None
 

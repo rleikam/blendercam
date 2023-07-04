@@ -91,6 +91,7 @@ class Context(object):
     def getClipEdges(self):
         xmin, xmax, ymin, ymax = self.extent
         clipEdges = []
+
         for edge in self.edges:
             equation = self.lines[edge[0]]  # line equation
             if edge[1] != -1 and edge[2] != -1:  # finite line
@@ -335,6 +336,8 @@ def voronoi(siteList, context):
     priorityQ = PriorityQueue(siteList.ymin, siteList.ymax, len(siteList))
     siteIter = siteList.iterator()
 
+    edgeID = 0
+
     bottomsite = siteIter.next()
     context.outSite(bottomsite)
     newsite = siteIter.next()
@@ -354,7 +357,8 @@ def voronoi(siteList, context):
             # if this halfedge has no edge, bot = bottom site (whatever that is)
             # create a new edge that bisects
             bot = lbnd.rightreg(bottomsite)
-            edge = Edge.bisect(bot, newsite)
+            edge = Edge.bisect(bot, newsite, edgeID)
+            edgeID += 1
             context.outBisector(edge)
 
             # create a new Halfedge, setting its pm field to 0 and insert
@@ -432,7 +436,8 @@ def voronoi(siteList, context):
 
             # Create an Edge (or line) that is between the two Sites.  This
             # creates the formula of the line, and assigns a line number to it
-            edge = Edge.bisect(bot, top)
+            edge = Edge.bisect(bot, top, edgeID)
+            edgeID += 1
             context.outBisector(edge)
 
             # create a HE from the edge
@@ -464,7 +469,6 @@ def voronoi(siteList, context):
     while he is not edgeList.rightend:
         context.outEdge(he.edge)
         he = he.right
-    Edge.EDGE_NUM = 0  # CF
 
 
 # ------------------------------------------------------------------
@@ -510,7 +514,6 @@ class Site(object):
 class Edge(object):
     LE = 0  # left end indice --> edge.ep[Edge.LE]
     RE = 1  # right end indice
-    EDGE_NUM = 0
     DELETED = {}  # marker value
 
     def __init__(self):
@@ -533,7 +536,7 @@ class Edge(object):
         return True
 
     @staticmethod
-    def bisect(s1, s2):
+    def bisect(s1, s2, edgeID):
         newedge = Edge()
         newedge.reg[0] = s1  # store the sites that this edge is bisecting
         newedge.reg[1] = s2
@@ -560,8 +563,7 @@ class Edge(object):
             newedge.a = dx / dy
             newedge.c /= dy
 
-        newedge.edgenum = Edge.EDGE_NUM
-        Edge.EDGE_NUM += 1
+        newedge.edgenum = edgeID
         return newedge
 
 

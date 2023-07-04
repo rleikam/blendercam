@@ -35,6 +35,7 @@ import math
 from Equation import Expression
 import numpy as np
 
+from bpy.props import EnumProperty, FloatProperty, BoolProperty
 
 # boolean operations for curve objects
 class CamCurveBoolean(bpy.types.Operator):
@@ -43,7 +44,7 @@ class CamCurveBoolean(bpy.types.Operator):
     bl_label = "Curve Boolean"
     bl_options = {'REGISTER', 'UNDO'}
 
-    boolean_type: bpy.props.EnumProperty(name='type',
+    boolean_type: EnumProperty(name='type',
                                          items=(('UNION', 'Union', ''), ('DIFFERENCE', 'Difference', ''),
                                                 ('INTERSECT', 'Intersect', '')),
                                          description='boolean type',
@@ -76,7 +77,6 @@ class CamCurveConvexHull(bpy.types.Operator):
         utils.polygonConvexHull(context)
         return {'FINISHED'}
 
-
 # intarsion or joints
 class CamCurveIntarsion(bpy.types.Operator):
     """makes curve cuttable both inside and outside, for intarsion and joints"""
@@ -84,19 +84,19 @@ class CamCurveIntarsion(bpy.types.Operator):
     bl_label = "Intarsion"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
-    diameter: bpy.props.FloatProperty(name="cutter diameter", default=.001, min=0, max=0.025, precision=4,
+    diameter: FloatProperty(name="Cutter diameter", default=.001, min=0, max=0.025, precision=4,
                                       unit="LENGTH")
-    tolerance: bpy.props.FloatProperty(name="cutout Tolerance", default=.0001, min=0, max=0.005, precision=4,
+    tolerance: FloatProperty(name="Cutout Tolerance", default=.0001, min=0, max=0.005, precision=4,
                                        unit="LENGTH")
-    backlight: bpy.props.FloatProperty(name="Backlight seat", default=0.000, min=0, max=0.010, precision=4,
+    backlight: FloatProperty(name="Backlight seat", default=0.000, min=0, max=0.010, precision=4,
                                        unit="LENGTH")
-    perimeter_cut: bpy.props.FloatProperty(name="Perimeter cut offset", default=0.000, min=0, max=0.100, precision=4,
+    perimeter_cut: FloatProperty(name="Perimeter cut offset", default=0.000, min=0, max=0.100, precision=4,
                                            unit="LENGTH")
-    base_thickness: bpy.props.FloatProperty(name="Base material thickness", default=0.000, min=0, max=0.100,
+    base_thickness: FloatProperty(name="Base material thickness", default=0.000, min=0, max=0.100,
                                             precision=4, unit="LENGTH")
-    intarsion_thickness: bpy.props.FloatProperty(name="Intarsion material thickness", default=0.000, min=0, max=0.100,
+    intarsion_thickness: FloatProperty(name="Intarsion material thickness", default=0.000, min=0, max=0.100,
                                                  precision=4, unit="LENGTH")
-    backlight_depth_from_top: bpy.props.FloatProperty(name="Backlight well depth", default=0.000, min=0, max=0.100,
+    backlight_depth_from_top: FloatProperty(name="Backlight well depth", default=0.000, min=0, max=0.100,
                                                       precision=4, unit="LENGTH")
 
     @classmethod
@@ -104,51 +104,31 @@ class CamCurveIntarsion(bpy.types.Operator):
         return context.active_object is not None and (context.active_object.type in ['CURVE', 'FONT'])
 
     def execute(self, context):
-        selected = context.selected_objects  # save original selected items
-
         simple.remove_multiple('intarsion_')
 
-        for ob in selected:
-            ob.select_set(True)  # select original curves
+        currentObject = context.active_object
 
-        #  Perimeter cut largen then intarsion pocket externally, optional
+        originalObjectSilhouette = utils.curveToShapely(currentObject)
+        originalObjectSilhouette = shapely.ops.unary_union(originalObjectSilhouette)
 
-        diam = self.diameter * 1.05 + self.backlight * 2  # make the diameter 5% larger and compensate for backlight
-        utils.silhoueteOffset(context, -diam / 2)
+        # Creates a dilation, erosion, dilation contour on the original object silhouette to smoothe up the sharp corners
+        # along the diameter
+        objectSilhouette = originalObjectSilhouette. \
+            buffer(-self.diameter/2, resolution=16). \
+            buffer(self.diameter, resolution=16). \
+            buffer(-self.diameter/2, resolution=16)
 
-        o1 = bpy.context.active_object
-        utils.silhoueteOffset(context, diam)
-        o2 = bpy.context.active_object
-        utils.silhoueteOffset(context, -diam / 2)
-        o3 = bpy.context.active_object
-        o1.select_set(True)
-        o2.select_set(True)
-        o3.select_set(False)
-        bpy.ops.object.delete(use_global=False)  # delete o1 and o2 temporary working curves
-        o3.name = "intarsion_pocket"  # this is the pocket for intarsion
-        bpy.context.object.location[2] = -self.intarsion_thickness
+        profileObject = utils.shapelyToCurve(f"{currentObject.name}Profile", objectSilhouette, currentObject.location.z)
+        pocketObject = utils.shapelyToCurve(f"{currentObject.name}Pocket", objectSilhouette, currentObject.location.z - self.intarsion_thickness)
 
         if self.perimeter_cut > 0.0:
-            utils.silhoueteOffset(context, self.perimeter_cut)
-            bpy.context.active_object.name = "intarsion_perimeter"
-            bpy.context.object.location[2] = -self.base_thickness
-            bpy.ops.object.select_all(action='DESELECT')  # deselect new curve
+            perimeterSilhouette = originalObjectSilhouette.buffer(self.perimeter_cut, resolution=16)
+            perimeterObject = utils.shapelyToCurve(f"{currentObject.name}Perimeter", perimeterSilhouette, -self.base_thickness)
 
-        o3.select_set(True)
-        context.view_layer.objects.active = o3
-        #   intarsion profile is the inside piece of the intarsion
-        utils.silhoueteOffset(context, -self.tolerance / 2)  # make smaller curve for material profile
-        bpy.context.object.location[2] = self.intarsion_thickness
-        o4 = bpy.context.active_object
-        bpy.context.active_object.name = "intarsion_profil"
-        o4.select_set(False)
+        if self.backlight > 0.0:
+            backlightSilhouette = originalObjectSilhouette.buffer((-self.tolerance / 2) - self.backlight)
+            backlightObject = utils.shapelyToCurve(f"{currentObject.name}Backlight", backlightSilhouette, -self.backlight_depth_from_top - self.intarsion_thickness)
 
-        if self.backlight > 0.0:  # Make a smaller curve for backlighting purposes
-            utils.silhoueteOffset(context, (-self.tolerance / 2) - self.backlight)
-            bpy.context.active_object.name = "intarsion_backlight"
-            bpy.context.object.location[2] = -self.backlight_depth_from_top - self.intarsion_thickness
-            o4.select_set(True)
-        o3.select_set(True)
         return {'FINISHED'}
 
 
@@ -159,11 +139,11 @@ class CamCurveOvercuts(bpy.types.Operator):
     bl_label = "Add Overcuts"
     bl_options = {'REGISTER', 'UNDO'}
 
-    diameter: bpy.props.FloatProperty(name="diameter", default=.003175, min=0, max=100, precision=4, unit="LENGTH")
-    threshold: bpy.props.FloatProperty(name="threshold", default=math.pi / 2 * .99, min=-3.14, max=3.14, precision=4,
+    diameter: FloatProperty(name="diameter", default=.003175, min=0, max=100, precision=4, unit="LENGTH")
+    threshold: FloatProperty(name="threshold", default=math.pi / 2 * .99, min=-3.14, max=3.14, precision=4,
                                        subtype="ANGLE", unit="ROTATION")
-    do_outer: bpy.props.BoolProperty(name="Outer polygons", default=True)
-    invert: bpy.props.BoolProperty(name="Invert", default=False)
+    do_outer: BoolProperty(name="Outer polygons", default=True)
+    invert: BoolProperty(name="Invert", default=False)
 
     @classmethod
     def poll(cls, context):
@@ -243,24 +223,24 @@ class CamCurveOvercutsB(bpy.types.Operator):
     bl_label = "Add Overcuts-B"
     bl_options = {'REGISTER', 'UNDO'}
 
-    diameter: bpy.props.FloatProperty(name="Tool diameter", default=.003175,
+    diameter: FloatProperty(name="Tool diameter", default=.003175,
                                       description='Tool bit diameter used in cut operation', min=0, max=100,
                                       precision=4, unit="LENGTH")
-    style: bpy.props.EnumProperty(
+    style: EnumProperty(
         name="style",
         items=(('OPEDGE', 'opposite edge', 'place corner overcuts on opposite edges'),
                ('DOGBONE', 'Dog-bone / Corner Point', 'place overcuts at center of corners'),
                ('TBONE', 'T-bone', 'place corner overcuts on the same edge')),
         default='DOGBONE',
         description='style of overcut to use')
-    threshold: bpy.props.FloatProperty(name="Max Inside Angle", default=math.pi / 2, min=-3.14, max=3.14,
+    threshold: FloatProperty(name="Max Inside Angle", default=math.pi / 2, min=-3.14, max=3.14,
                                        description='The maximum angle to be considered as an inside corner',
                                        precision=4, subtype="ANGLE", unit="ROTATION")
-    do_outer: bpy.props.BoolProperty(name="Include outer curve",
+    do_outer: BoolProperty(name="Include outer curve",
                                      description='Include the outer curve if there are curves inside', default=True)
-    do_invert: bpy.props.BoolProperty(name="Invert", description='invert overcut operation on all curves',
+    do_invert: BoolProperty(name="Invert", description='invert overcut operation on all curves',
                                       default=True)
-    otherEdge: bpy.props.BoolProperty(name="other edge",
+    otherEdge: BoolProperty(name="other edge",
                                       description='change to the other edge for the overcut to be on', default=False)
 
     @classmethod
@@ -510,11 +490,11 @@ class CamMeshGetPockets(bpy.types.Operator):
     bl_label = "Get pocket surfaces"
     bl_options = {'REGISTER', 'UNDO'}
 
-    threshold: bpy.props.FloatProperty(name="horizontal threshold",
+    threshold: FloatProperty(name="horizontal threshold",
                                        description="How horizontal the surface must be for a pocket: "
                                                    "1.0 perfectly flat, 0.0 is any orientation",
                                        default=.99, min=0, max=1.0, precision=4)
-    zlimit: bpy.props.FloatProperty(name="z limit",
+    zlimit: FloatProperty(name="z limit",
                                     description="maximum z height considered for pocket operation, default is 0.0",
                                     default=0.0, min=-1000.0, max=1000.0, precision=4, unit='LENGTH')
 
@@ -606,11 +586,11 @@ class CamOffsetSilhouete(bpy.types.Operator):
     bl_label = "Silhouete offset"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
-    offset: bpy.props.FloatProperty(name="offset", default=.003, min=-100, max=100, precision=4, unit="LENGTH")
-    mitrelimit: bpy.props.FloatProperty(name="Mitre Limit", default=.003, min=0.0, max=20, precision=4, unit="LENGTH")
-    style: bpy.props.EnumProperty(name="type of curve", items=(
+    offset: FloatProperty(name="offset", default=.003, min=-100, max=100, precision=4, unit="LENGTH")
+    mitrelimit: FloatProperty(name="Mitre Limit", default=.003, min=0.0, max=20, precision=4, unit="LENGTH")
+    style: EnumProperty(name="type of curve", items=(
         ('1', 'Round', ''), ('2', 'Mitre', ''), ('3', 'Bevel', '')))
-    opencurve: bpy.props.BoolProperty(name="Dialate open curve", default=False)
+    opencurve: BoolProperty(name="Dialate open curve", default=False)
 
     @classmethod
     def poll(cls, context):

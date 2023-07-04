@@ -24,7 +24,6 @@
 import bpy
 import mathutils
 import math
-import time
 from bpy.props import *
 from cam import utils
 import numpy as np
@@ -33,77 +32,82 @@ from cam import simple
 from cam import image_utils
 
 
-def createSimulationObject(name, operations, i):
-    oname = 'csim_' + name
+def createSimulationObject(name, operations, image):
+    simulationObjectName = utils.getCAMSimulationObjectNameConventionFrom(name)
 
-    o = operations[0]
+    operation = operations[0]
 
-    if oname in bpy.data.objects:
-        ob = bpy.data.objects[oname]
+    if simulationObjectName in bpy.data.objects:
+        object = bpy.data.objects[simulationObjectName]
     else:
         bpy.ops.mesh.primitive_plane_add(align='WORLD', enter_editmode=False, location=(0, 0, 0), rotation=(0, 0, 0))
-        ob = bpy.context.active_object
-        ob.name = oname
+        object = bpy.context.active_object
+        object.name = simulationObjectName
 
         bpy.ops.object.modifier_add(type='SUBSURF')
-        ss = ob.modifiers[-1]
-        ss.subdivision_type = 'SIMPLE'
-        ss.levels = 6
-        ss.render_levels = 6
+        subdivisionSurfaceModifier = object.modifiers[-1]
+        subdivisionSurfaceModifier.subdivision_type = 'SIMPLE'
+        subdivisionSurfaceModifier.levels = 6
+        subdivisionSurfaceModifier.render_levels = 6
         bpy.ops.object.modifier_add(type='SUBSURF')
-        ss = ob.modifiers[-1]
-        ss.subdivision_type = 'SIMPLE'
-        ss.levels = 4
-        ss.render_levels = 3
+        subdivisionSurfaceModifier = object.modifiers[-1]
+        subdivisionSurfaceModifier.subdivision_type = 'SIMPLE'
+        subdivisionSurfaceModifier.levels = 4
+        subdivisionSurfaceModifier.render_levels = 3
         bpy.ops.object.modifier_add(type='DISPLACE')
 
-    ob.location = ((o.max.x + o.min.x) / 2, (o.max.y + o.min.y) / 2, o.min.z)
-    ob.scale.x = (o.max.x - o.min.x) / 2
-    ob.scale.y = (o.max.y - o.min.y) / 2
-    print(o.max.x, o.min.x)
-    print(o.max.y, o.min.y)
+    collection = utils.getCAMSimulationCollection()
+
+    utils.reassignObjectsToCollection([object], collection)
+
+    object.location = ((operation.max.x + operation.min.x) / 2, (operation.max.y + operation.min.y) / 2, operation.min.z)
+    object.scale.x = (operation.max.x - operation.min.x) / 2
+    object.scale.y = (operation.max.y - operation.min.y) / 2
+    print(operation.max.x, operation.min.x)
+    print(operation.max.y, operation.min.y)
     print('bounds')
-    disp = ob.modifiers[-1]
+    disp = object.modifiers[-1]
     disp.direction = 'Z'
     disp.texture_coords = 'LOCAL'
     disp.mid_level = 0
 
-    if oname in bpy.data.textures:
-        t = bpy.data.textures[oname]
+    if simulationObjectName in bpy.data.textures:
+        t = bpy.data.textures[simulationObjectName]
 
         t.type = 'IMAGE'
         disp.texture = t
 
-        t.image = i
+        t.image = image
     else:
         bpy.ops.texture.new()
         for t in bpy.data.textures:
             if t.name == 'Texture':
                 t.type = 'IMAGE'
-                t.name = oname
+                t.name = simulationObjectName
                 t = t.type_recast()
                 t.type = 'IMAGE'
-                t.image = i
+                t.image = image
                 disp.texture = t
-    ob.hide_render = True
+    object.hide_render = True
     bpy.ops.object.shade_smooth()
 
 
 def doSimulation(name, operations):
     """perform simulation of operations. Currently only for 3 axis"""
-    for o in operations:
-        utils.getOperationSources(o)
-    limits = utils.getBoundsMultiple(
-        operations)  # this is here because some background computed operations still didn't have bounds data
-    i = generateSimulationImage(operations, limits)
-#    cp = simple.getCachePath(operations[0])[:-len(operations[0].name)] + name
+    for operation in operations:
+        utils.getOperationSources(operation)
+
+    # this is here because some background computed operations still didn't have bounds data
+    limits = utils.getBoundsMultiple(operations)
+    image = generateSimulationImage(operations, limits)
+
     cp = simple.getSimulationPath()+name
     print('cp=', cp)
-    iname = cp + '_sim.exr'
+    imageName = cp + '_sim.exr'
 
-    image_utils.numpysave(i, iname)
-    i = bpy.data.images.load(iname)
-    createSimulationObject(name, operations, i)
+    image_utils.numpysave(image, imageName)
+    image = bpy.data.images.load(imageName)
+    createSimulationObject(name, operations, image)
 
 
 def generateSimulationImage(operations, limits):
@@ -112,9 +116,9 @@ def generateSimulationImage(operations, limits):
     sx = maxx - minx
     sy = maxy - miny
 
-    o = operations[0]  # getting sim detail and others from first op.
-    simulation_detail = o.optimisation.simulation_detail
-    borderwidth = o.borderwidth
+    operation = operations[0]  # getting sim detail and others from first op.
+    simulation_detail = operation.optimisation.simulation_detail
+    borderwidth = operation.borderwidth
     resx = math.ceil(sx / simulation_detail) + 2 * borderwidth
     resy = math.ceil(sy / simulation_detail) + 2 * borderwidth
 
@@ -123,23 +127,24 @@ def generateSimulationImage(operations, limits):
     si.resize(resx, resy)
     si.fill(maxz)
 
-    for o in operations:
-        ob = bpy.data.objects["cam_path_{}".format(o.name)]
-        m = ob.data
-        verts = m.vertices
+    for operation in operations:
+        camPathName = utils.getCAMPathObjectNameConventionFrom(operation.name)
+        object = bpy.data.objects[camPathName]
+        mesh = object.data
+        verts = mesh.vertices
 
-        if o.do_simulation_feedrate:
+        if operation.do_simulation_feedrate:
             kname = 'feedrates'
-            m.use_customdata_edge_crease = True
+            mesh.use_customdata_edge_crease = True
 
-            if m.shape_keys is None or m.shape_keys.key_blocks.find(kname) == -1:
-                ob.shape_key_add()
-                if len(m.shape_keys.key_blocks) == 1:
-                    ob.shape_key_add()
-                shapek = m.shape_keys.key_blocks[-1]
+            if mesh.shape_keys is None or mesh.shape_keys.key_blocks.find(kname) == -1:
+                object.shape_key_add()
+                if len(mesh.shape_keys.key_blocks) == 1:
+                    object.shape_key_add()
+                shapek = mesh.shape_keys.key_blocks[-1]
                 shapek.name = kname
             else:
-                shapek = m.shape_keys.key_blocks[kname]
+                shapek = mesh.shape_keys.key_blocks[kname]
             shapek.data[0].co = (0.0, 0, 0)
         # print(len(shapek.data))
         # print(len(verts_rotations))
@@ -148,7 +153,7 @@ def generateSimulationImage(operations, limits):
 
         totalvolume = 0.0
 
-        cutterArray = getCutterArray(o, simulation_detail)
+        cutterArray = getCutterArray(operation, simulation_detail)
         cutterArray = -cutterArray
         lasts = verts[1].co
         perc = -1
@@ -191,8 +196,8 @@ def generateSimulationImage(operations, limits):
                             z = lasts.z + v.z
                             # print(z)
                             if lastxs != xs or lastys != ys:
-                                volume_partial = simCutterSpot(xs, ys, z, cutterArray, si, o.do_simulation_feedrate)
-                                if o.do_simulation_feedrate:
+                                volume_partial = simCutterSpot(xs, ys, z, cutterArray, si, operation.do_simulation_feedrate)
+                                if operation.do_simulation_feedrate:
                                     totalvolume += volume
                                     volume += volume_partial
                                 lastxs = xs
@@ -203,8 +208,8 @@ def generateSimulationImage(operations, limits):
 
                     xs = int((s.x - minx) / simulation_detail + borderwidth + simulation_detail / 2)  # -middle
                     ys = int((s.y - miny) / simulation_detail + borderwidth + simulation_detail / 2)  # -middle
-                    volume_partial = simCutterSpot(xs, ys, s.z, cutterArray, si, o.do_simulation_feedrate)
-                if o.do_simulation_feedrate:  # compute volumes and write data into shapekey.
+                    volume_partial = simCutterSpot(xs, ys, s.z, cutterArray, si, operation.do_simulation_feedrate)
+                if operation.do_simulation_feedrate:  # compute volumes and write data into shapekey.
                     volume += volume_partial
                     totalvolume += volume
                     if l > 0:
@@ -223,7 +228,7 @@ def generateSimulationImage(operations, limits):
                 lasts = s
 
         # print('dropped '+str(dropped))
-        if o.do_simulation_feedrate:  # smoothing ,but only backward!
+        if operation.do_simulation_feedrate:  # smoothing ,but only backward!
             xcoef = shapek.data[len(shapek.data) - 1].co.x / len(shapek.data)
             for a in range(0, 10):
                 # print(shapek.data[-1].co)
@@ -274,7 +279,7 @@ def generateSimulationImage(operations, limits):
                 else:
                     d.co.z = scale_graph * 1
                 if i < totverts - 1:
-                    m.edges[i].crease = d.co.y / (normal_load * 4)
+                    mesh.edges[i].crease = d.co.y / (normal_load * 4)
 
     si = si[borderwidth:-borderwidth, borderwidth:-borderwidth]
     si += -minz

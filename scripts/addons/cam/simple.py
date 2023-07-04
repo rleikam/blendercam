@@ -42,11 +42,6 @@ def tuple_sub(t, t1):  # sub two tuples as Vectors
 def tuple_mul(t, c):  # multiply two tuples with a number
     return t[0] * c, t[1] * c, t[2] * c
 
-
-def tuple_length(t):  # get length of vector, but passed in as tuple.
-    return Vector(t).length
-
-
 # timing functions for optimisation purposes...
 def timinginit():
     return [0, 0]
@@ -77,13 +72,16 @@ def progress(text, n=None):
     sys.stdout.flush()
 
 
-def activate(o):
+def activate(object):
     """makes an object active, used many times in blender"""
-    s = bpy.context.scene
     bpy.ops.object.select_all(action='DESELECT')
-    o.select_set(state=True)
-    s.objects[o.name].select_set(state=True)
-    bpy.context.view_layer.objects.active = o
+
+    object.select_set(state=True)
+
+    scene = bpy.context.scene
+    scene.objects[object.name].select_set(state=True)
+    
+    bpy.context.view_layer.objects.active = object
 
 
 def dist2d(v1, v2):
@@ -197,11 +195,11 @@ def strInUnits(x, precision=5):
 def select_multiple(name):
     scene = bpy.context.scene
     bpy.ops.object.select_all(action='DESELECT')
-    for ob in scene.objects:  # join pocket curve calculations
-        if ob.name.startswith(name):
-            ob.select_set(True)
+    for object in scene.objects:  # join pocket curve calculations
+        if object.name.startswith(name):
+            object.select_set(True)
         else:
-            ob.select_set(False)
+            object.select_set(False)
 
 
 # join multiple objects starting with 'name' renaming final object as 'name'
@@ -215,9 +213,9 @@ def join_multiple(name):
 def remove_multiple(name):
     scene = bpy.context.scene
     bpy.ops.object.select_all(action='DESELECT')
-    for ob in scene.objects:
-        if ob.name.startswith(name):
-            ob.select_set(True)
+    for object in scene.objects:
+        if object.name.startswith(name):
+            object.select_set(True)
             bpy.ops.object.delete()
 
 

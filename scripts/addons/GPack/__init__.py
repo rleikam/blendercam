@@ -16,6 +16,8 @@ import math, random, os
 import mathutils
 from mathutils import *
 import bmesh
+from scripts.addons.GPack.GPackCurvesOperator import GPackCurvesOperator
+from scripts.addons.GPack.GPackUVOperator import GPackUVOperator
 PRECISION=0.0000000001
 
 
@@ -570,36 +572,7 @@ def import_scene(obname):
 import bpy
 
 
-class GPackUVOperator(bpy.types.Operator):
-	"""Tooltip"""
-	bl_idname = "object.gpack_uv"
-	bl_label = "Gravity Pack UVs"
-
-	@classmethod
-	def poll(cls, context):
-		return len(context.selected_objects)>0
-
-	def execute(self, context):
-		doGameUV(context)
-		return {'FINISHED'}
-
-class GPackCurvesOperator(bpy.types.Operator):
-	"""Tooltip"""
-	bl_idname = "object.gpack"
-	bl_label = "Gravity Pack Curves"
-
-	@classmethod
-	def poll(cls, context):
-		return len(context.selected_objects)>0
-
-	def execute(self, context):
-		doGameObs(context)
-		return {'FINISHED'}
-
-
 class GPackSettings(bpy.types.PropertyGroup):
-
-
 	#lpgroup =   bpy.props.StringProperty(name="low poly group", default="")
 	#hpgroup =   bpy.props.StringProperty(name="high poly group", default="")
 	apply =  bpy.props.BoolProperty(name="apply",description="", default=False)

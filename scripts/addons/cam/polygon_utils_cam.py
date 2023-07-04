@@ -76,87 +76,68 @@ def shapelyToMultipolygon(anydata):
         return sgeometry.MultiPolygon()
 
 
-def shapelyToCoords(anydata):
-    p = anydata
-    seq = []
-    # print(p.type)
-    # print(p.geom_type)
-    if p.is_empty:
-        return seq
-    elif p.geom_type == 'Polygon':
+def shapelyToCoords(geometry):
+    geometrySequence = []
+    if geometry.is_empty:
+        return geometrySequence
 
-        # print('polygon')
-        clen = len(p.exterior.coords)
-        # seq = sgeometry.asMultiLineString(p)
-        seq = [p.exterior.coords]
-        # print(len(p.interiors))
-        for interior in p.interiors:
-            seq.append(interior.coords)
-    elif p.geom_type == 'MultiPolygon':
-        clen = 0
-        seq = []
-        for sp in p.geoms:
-            clen += len(sp.exterior.coords)
-            seq.append(sp.exterior.coords)
-            for interior in sp.interiors:
-                seq.append(interior.coords)
+    match geometry.geom_type:
+        case "Polygon":
+            geometrySequence = [geometry.exterior.coords]
+            for interior in geometry.interiors:
+                geometrySequence.append(interior.coords)
 
-    elif p.geom_type == 'MultiLineString':
-        seq = []
-        for linestring in p.geoms:
-            seq.append(linestring.coords)
-    elif p.geom_type == 'LineString':
-        seq = []
-        seq.append(p.coords)
+        case "MultiPolygon":
+            geometrySequence = []
+            for sp in geometry.geoms:
+                geometrySequence.append(sp.exterior.coords)
+                for interior in sp.interiors:
+                    geometrySequence.append(interior.coords)
 
-    elif p.geom_type == 'MultiPoint':
-        return
-    elif p.geom_type == 'GeometryCollection':
-        # print(dir(p))
-        # print(p.geometryType, p.geom_type)
-        clen = 0
-        seq = []
-        # print(p.boundary.coordsd)
-        for sp in p.geoms:  # TODO
-            clen += len(sp.exterior.coords)
-            seq.append(sp.exterior.coords)
-            for interior in sp.interiors:
-                seq.extend(interior.coords)
+        case "MultiLineString":
+            geometrySequence = [lineString.coords for lineString in geometry.geoms]
 
-    return seq
+        case "LineString":
+            geometrySequence = [geometry.coords]
+
+        case "MultiPoint":
+            return
+        
+        case "GeometryCollection":
+            geometrySequence = []
+            for sp in geometry.geoms:
+                geometrySequence.append(sp.exterior.coords)
+                for interior in sp.interiors:
+                    geometrySequence.extend(interior.coords)
+
+    return geometrySequence
 
 
 def shapelyToCurve(name, p, z):
-    import bpy, bmesh
+    import bpy
     from bpy_extras import object_utils
-    verts = []
-    edges = []
-    vi = 0
-    ci = 0
-    # for c in p.exterior.coords:
 
-    # print(p.type)
-    seq = shapelyToCoords(p)
-    w = 1  # weight
+    sequence = shapelyToCoords(p)
+    w = 1
 
-    curvedata = bpy.data.curves.new(name=name, type='CURVE')
-    curvedata.dimensions = '3D'
+    curveData = bpy.data.curves.new(name=name, type='CURVE')
+    curveData.dimensions = '3D'
 
-    objectdata = bpy.data.objects.new(name, curvedata)
-    objectdata.location = (0, 0, 0)  # object origin
-    bpy.context.collection.objects.link(objectdata)
+    objectData = bpy.data.objects.new(name, curveData)
+    objectData.location = (0, 0, 0)
+    bpy.context.collection.objects.link(objectData)
 
-    for c in seq:
-        polyline = curvedata.splines.new('POLY')
-        polyline.points.add(len(c) - 1)
-        for num in range(len(c)):
-            x, y = c[num][0], c[num][1]
+    for coordinate in sequence:
+        polyline = curveData.splines.new('POLY')
+        polyline.points.add(len(coordinate) - 1)
+        for num in range(len(coordinate)):
+            x, y = coordinate[num][0], coordinate[num][1]
             polyline.points[num].co = (x, y, z, w)
 
-    bpy.context.view_layer.objects.active = objectdata
-    objectdata.select_set(state=True)
+    bpy.context.view_layer.objects.active = objectData
+    objectData.select_set(state=True)
 
-    for c in objectdata.data.splines:
-        c.use_cyclic_u = True
+    for coordinate in objectData.data.splines:
+        coordinate.use_cyclic_u = True
 
-    return objectdata  # bpy.context.active_object
+    return objectData  # bpy.context.active_object
