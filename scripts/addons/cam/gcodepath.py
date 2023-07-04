@@ -317,10 +317,12 @@ def exportGcodePath(filename, verticeList, operations):
         offline = 0
         online = 0
         cut = True  # active cut variable for laser or plasma
+        shapes = 0
         for vi, vert in enumerate(verts):
             # skip the first vertex if this is a chained operation
             # ie: outputting more than one operation
             # otherwise the machine gets sent back to 0,0 for each operation which is unecessary
+            shapes += 1  #  Count amount of shapes
             if i > 0 and vi == 0:
                 continue
             v = vert.co
@@ -355,18 +357,14 @@ def exportGcodePath(filename, verticeList, operations):
 
                 if r.x == lastrot.x:
                     ra = None
-                # print(r.x,lastrot.x)
                 else:
 
                     ra = r.x * rotcorr
-                # print(ra,'RA')
-                # ra=r.x*rotcorr
+
                 if r.y == lastrot.y:
                     rb = None
                 else:
                     rb = r.y * rotcorr
-            # rb=r.y*rotcorr
-            # print (	ra,rb)
 
             if vi > 0 and v.x == last.x:
                 vx = None
@@ -388,8 +386,6 @@ def exportGcodePath(filename, verticeList, operations):
             vect = v - last
             l = vect.length
             if vi > 0 and l > 0 and downvector.angle(vect) < plungelimit:
-                # print('plunge')
-                # print(vect)
                 if f != plungefeedrate or (fadjust and fadjustval != 1):
                     f = plungefeedrate * fadjustval
                     c.feedrate(f)
@@ -415,11 +411,9 @@ def exportGcodePath(filename, verticeList, operations):
                         c.feed(x=vx, y=vy, z=vz)
                 else:
 
-                    # print('plungef',ra,rb)
                     c.feed(x=vx, y=vy, z=vz, a=ra, b=rb)
 
-            elif v.z >= free_movement_height or vi == 0:  # v.z==last.z==free_movement_height or vi==0
-
+            elif v.z >= free_height or vi == 0:  # v.z==last.z==free_height or vi==0
                 if f != freefeedrate:
                     f = freefeedrate
                     c.feedrate(f)
@@ -441,10 +435,13 @@ def exportGcodePath(filename, verticeList, operations):
                         c.rapid(x=vx, y=vy)
                     else:
                         c.rapid(x=vx, y=vy, z=vz)
+                        #  this is to evaluate operation time and adds a feedrate for fast moves
+                        if vz is not None:
+                            f = plungefeedrate * fadjustval * 0.35  #  compensate for multiple fast move accelerations
+                        if vx is not None or vy is not None:
+                            f = freefeedrate * 0.8  #  compensate for free feedrate acceleration
                 else:
-                    # print('rapidf',ra,rb)
                     c.rapid(x=vx, y=vy, z=vz, a=ra, b=rb)
-            # gcommand='{RAPID}'
 
             else:
 
@@ -455,11 +452,10 @@ def exportGcodePath(filename, verticeList, operations):
                 if operation.machine_axes == '3':
                     c.feed(x=vx, y=vy, z=vz)
                 else:
-                    # print('normalf',ra,rb)
                     c.feed(x=vx, y=vy, z=vz, a=ra, b=rb)
 
-            duration += vect.length / f
-            # print(duration)
+            vector_duration = vect.length / f
+            duration += vector_duration
             last = v
             if operation.machine_axes != '3':
                 lastrot = r
@@ -594,7 +590,7 @@ def checkMemoryLimit(o):
     if res > limit:
         ratio = (res / limit)
         o.optimisation.pixsize = o.optimisation.pixsize * math.sqrt(ratio)
-        o.info.warnings += f"Memory limit: sampling resolution reduced to {o.optimisation.pixsize}\n"
+        o.info.warnings += f"Memory limit: sampling resolution reduced to {o.optimisation.pixsize:.2e}\n"
         print('changing sampling resolution to %f' % o.optimisation.pixsize)
 
 def getPath3axis(context, operation):

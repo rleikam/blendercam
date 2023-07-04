@@ -20,8 +20,6 @@ class CAMMachinePanel(CAMButtonsPanel, Panel):
         ao = scene.cam_machine
 
         if ao:
-            use_experimental = bpy.context.preferences.addons['cam'].preferences.experimental
-
             # machine preset
             row = layout.row(align=True)
             row.menu(CAMMachineMTPresets.__name__, text=CAMMachineMTPresets.bl_label)
@@ -53,7 +51,7 @@ class CAMMachinePanel(CAMButtonsPanel, Panel):
             if ao.output_tool_change:
                 layout.prop(ao, 'output_g43_on_tool_change')
 
-            if use_experimental:
+            if self.use_experimental:
                 layout.prop(ao, 'axis4')
                 layout.prop(ao, 'axis5')
                 layout.prop(ao, 'collet_size')
