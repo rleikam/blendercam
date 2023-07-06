@@ -219,24 +219,23 @@ def getOffsetImageCavities(o, i):  # for pencil operation mainly
 
     return chunks
 
-
-def imageEdgeSearch_online(o, ar, zimage):  # search edges for pencil strategy, another try.
+def imageEdgeSearch_online(o, ar, zimage):
     minx, miny, minz, maxx, maxy, maxz = o.min.x, o.min.y, o.min.z, o.max.x, o.max.y, o.max.z
-    r = ceil((o.cutter_diameter/12)/o.optimisation.pixsize)   # was commented
+    r = ceil((o.cutter_diameter/12)/o.optimisation.pixsize)
     coef = 0.75
     maxarx = ar.shape[0]
     maxary = ar.shape[1]
 
     directions = ((-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0))
 
-    indices = ar.nonzero()  # first get white pixels
+    indices = ar.nonzero()
     startpix = ar.sum()
     totpix = startpix
     chunks = []
     xs = indices[0][0]
     ys = indices[1][0]
-    nchunk = camPathChunk([(xs, ys, zimage[xs, ys])])  # startposition
-    dindex = 0  # index in the directions list
+    nchunk = camPathChunk([(xs, ys, zimage[xs, ys])])
+    dindex = 0
     last_direction = directions[dindex]
     test_direction = directions[dindex]
     i = 0
@@ -284,10 +283,10 @@ def imageEdgeSearch_online(o, ar, zimage):  # search edges for pencil strategy, 
                     testleftright = False
                 else:
                     testangulardistance = -testangulardistance
-                    testangulardistance += 1  # increment angle
+                    testangulardistance += 1 
                     testleftright = True
 
-                if abs(testangulardistance) > 6:  # /testlength
+                if abs(testangulardistance) > 6:
                     testangulardistance = 0
                     indices = ar.nonzero()
                     totpix = len(indices[0])
@@ -438,13 +437,13 @@ def crazyStrokeImage(o):
     anglerange = [-pi, pi]  # range for angle of toolpath vector versus material vector
     testangleinit = 0
     angleincrement = 0.05
-    if (o.movement.type == 'CLIMB' and o.movement.spindle_rotation == 'CCW') or (
-            o.movement.type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CW'):
+    if (o.movement_type == 'CLIMB' and o.spindle_rotation == 'CCW') or (
+            o.movement_type == 'CONVENTIONAL' and o.spindle_rotation == 'CW'):
         anglerange = [-pi, 0]
         testangleinit = 1
         angleincrement = -angleincrement
-    elif (o.movement.type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CCW') or (
-            o.movement.type == 'CLIMB' and o.movement.spindle_rotation == 'CW'):
+    elif (o.movement_type == 'CONVENTIONAL' and o.spindle_rotation == 'CCW') or (
+            o.movement_type == 'CLIMB' and o.spindle_rotation == 'CW'):
         anglerange = [0, pi]
         testangleinit = -1
         angleincrement = angleincrement
@@ -633,13 +632,13 @@ def crazyStrokeImageBinary(o, ar, avoidar):
     testangleinit = 0
     angleincrement = o.crazy_threshold4
 
-    if (o.movement.type == 'CLIMB' and o.movement.spindle_rotation == 'CCW') or (
-            o.movement.type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CW'):
+    if (o.movement_type == 'CLIMB' and o.movement.spindle_rotation == 'CCW') or (
+            o.movement_type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CW'):
         anglerange = [-pi, 0]
         testangleinit = anglelimit
         angleincrement = -angleincrement
-    elif (o.movement.type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CCW') or (
-            o.movement.type == 'CLIMB' and o.movement.spindle_rotation == 'CW'):
+    elif (o.movement_type == 'CONVENTIONAL' and o.movement.spindle_rotation == 'CCW') or (
+            o.movement_type == 'CLIMB' and o.movement.spindle_rotation == 'CW'):
         anglerange = [0, pi]
         testangleinit = -anglelimit
         angleincrement = angleincrement
@@ -1033,72 +1032,63 @@ def getResolution(o):
     resx = ceil(sx / o.optimisation.pixsize) + 2 * o.borderwidth
     resy = ceil(sy / o.optimisation.pixsize) + 2 * o.borderwidth
 
-# this basically renders blender zbuffer and makes it accessible by saving & loading it again.
-# that's because blender doesn't allow accessing pixels in render :(
-
-
-def renderSampleImage(o):
+def renderSampleImage(operation):
     t = time.time()
     simple.progress('getting zbuffer')
-    # print(o.zbuffer_image)
 
-    if o.geometry_source in ["OBJECT", "COLLECTION"]:
-        pixsize = o.optimisation.pixsize
+    if operation.geometry_source in ["OBJECT", "COLLECTION"]:
+        sx = operation.max.x - operation.min.x
+        sy = operation.max.y - operation.min.y
 
-        sx = o.max.x - o.min.x
-        sy = o.max.y - o.min.y
+        resx = math.ceil(sx / operation.optimisation.pixsize) + 2 * operation.borderwidth
+        resy = math.ceil(sy / operation.optimisation.pixsize) + 2 * operation.borderwidth
 
-        resx = math.ceil(sx / o.optimisation.pixsize) + 2 * o.borderwidth
-        resy = math.ceil(sy / o.optimisation.pixsize) + 2 * o.borderwidth
+        if not operation.update_zbufferimage_tag and len(operation.zbuffer_image) == resx and len(operation.zbuffer_image[0]) == resy:
+            return operation.zbuffer_image
 
-        if not o.update_zbufferimage_tag and len(o.zbuffer_image) == resx and len(o.zbuffer_image[0]) == resy:
-            # if we call this accidentally in more functions, which currently happens...
-            # print('has zbuffer')
-            return o.zbuffer_image
-        # ###setup image name
-        iname = getCachePath(o) + '_z.exr'
-        if not o.update_zbufferimage_tag:
+        iname = getCachePath(operation) + '_z.exr'
+        if not operation.update_zbufferimage_tag:
             try:
                 i = bpy.data.images.load(iname)
             except:
-                o.update_zbufferimage_tag = True
-        if o.update_zbufferimage_tag:
-            s = bpy.context.scene
+                operation.update_zbufferimage_tag = True
+        if operation.update_zbufferimage_tag:
+            scene = bpy.context.scene
 
             # prepare nodes first
-            s.use_nodes = True
-            n = s.node_tree
+            scene.use_nodes = True
+            nodeTree = scene.node_tree
 
-            n.links.clear()
-            n.nodes.clear()
-            n1 = n.nodes.new('CompositorNodeRLayers')
-            n2 = n.nodes.new('CompositorNodeViewer')
-            n3 = n.nodes.new('CompositorNodeComposite')
-            n.links.new(n1.outputs['Depth'], n2.inputs['Image'])
-            n.links.new(n1.outputs['Depth'], n3.inputs['Image'])
-            n.nodes.active = n2
+            nodeTree.links.clear()
+            nodeTree.nodes.clear()
+            n1 = nodeTree.nodes.new('CompositorNodeRLayers')
+            n2 = nodeTree.nodes.new('CompositorNodeViewer')
+            n3 = nodeTree.nodes.new('CompositorNodeComposite')
+            nodeTree.links.new(n1.outputs['Depth'], n2.inputs['Image'])
+            nodeTree.links.new(n1.outputs['Depth'], n3.inputs['Image'])
+            nodeTree.nodes.active = n2
             ###################
 
-            r = s.render
-            r.resolution_x = resx
-            r.resolution_y = resy
+            renderer = scene.render
+            renderer.resolution_x = resx
+            renderer.resolution_y = resy
 
             # resize operation image
-            o.offset_image.resize((resx, resy))
-            o.offset_image.fill(-10)
+            operation.offset_image.resize((resx, resy))
+            operation.offset_image.fill(-10)
 
             # various settings for  faster render
-            r.resolution_percentage = 100
+            renderer.resolution_percentage = 100
 
-            r.engine = 'BLENDER_EEVEE'
-            ff = r.image_settings.file_format
-            cm = r.image_settings.color_mode
-            r.image_settings.file_format = 'OPEN_EXR'
-            r.image_settings.color_mode = 'BW'
-            r.image_settings.color_depth = '32'
+            renderer.engine = 'BLENDER_EEVEE'
+            fileFormat = renderer.image_settings.file_format
+            colorMode = renderer.image_settings.color_mode
+            renderer.image_settings.file_format = 'OPEN_EXR'
+            renderer.image_settings.color_mode = 'BW'
+            renderer.image_settings.color_depth = '32'
 
             # camera settings
-            camera = s.camera
+            camera = scene.camera
             if camera is None:
                 bpy.ops.object.camera_add(align='WORLD', enter_editmode=False, location=(0, 0, 0),
                                           rotation=(0, 0, 0))
@@ -1106,109 +1096,101 @@ def renderSampleImage(o):
                 bpy.context.scene.camera = camera
 
             camera.data.type = 'ORTHO'
-            camera.data.ortho_scale = max(resx * o.optimisation.pixsize, resy * o.optimisation.pixsize)
-            camera.location = (o.min.x + sx / 2, o.min.y + sy / 2, 1)
+            camera.data.ortho_scale = max(resx * operation.optimisation.pixsize, resy * operation.optimisation.pixsize)
+            camera.location = (operation.min.x + sx / 2, operation.min.y + sy / 2, 1)
             camera.rotation_euler = (0, 0, 0)
-            # if not o.render_all:#removed in 0.3
 
             h = []
 
-            # ob=bpy.data.objects[o.object_name]
-            for ob in s.objects:
-                h.append(ob.hide_render)
-                ob.hide_render = True
-            for ob in o.objects:
-                ob.hide_render = False
+            for object in scene.objects:
+                h.append(object.hide_render)
+                object.hide_render = True
+
+            for object in operation.objects:
+                object.hide_render = False
 
             bpy.ops.render.render()
 
-            # if not o.render_all:
-            for id, obs in enumerate(s.objects):
-                obs.hide_render = h[id]
+            for index, object in enumerate(scene.objects):
+                object.hide_render = h[index]
 
-            imgs = bpy.data.images
-            for isearch in imgs:
-                if len(isearch.name) >= 13:
-                    if isearch.name[:13] == 'Render Result':
-                        i = isearch
+            images = bpy.data.images
+            for image in images:
+                if len(image.name) >= 13:
+                    if image.name[:13] == 'Render Result':
+                        i = image
 
-                        # progress(iname)
                         i.save_render(iname)
 
-            r.image_settings.file_format = ff
-            r.image_settings.color_mode = cm
+            renderer.image_settings.file_format = fileFormat
+            renderer.image_settings.color_mode = colorMode
 
             i = bpy.data.images.load(iname)
             bpy.context.scene.render.engine = 'BLENDERCAM_RENDER'
         a = imagetonumpy(i)
         a = 1.0 - a
-        o.zbuffer_image = a
-        o.update_zbufferimage_tag = False
+        operation.zbuffer_image = a
+        operation.update_zbufferimage_tag = False
 
     else:
-        i = bpy.data.images[o.source_image_name]
-        if o.source_image_crop:
-            sx = int(i.size[0] * o.source_image_crop_start_x / 100.0)
-            ex = int(i.size[0] * o.source_image_crop_end_x / 100.0)
-            sy = int(i.size[1] * o.source_image_crop_start_y / 100.0)
-            ey = int(i.size[1] * o.source_image_crop_end_y / 100.0)
+        i = bpy.data.images[operation.source_image_name]
+        if operation.source_image_crop:
+            sx = int(i.size[0] * operation.source_image_crop_start_x / 100.0)
+            ex = int(i.size[0] * operation.source_image_crop_end_x / 100.0)
+            sy = int(i.size[1] * operation.source_image_crop_start_y / 100.0)
+            ey = int(i.size[1] * operation.source_image_crop_end_y / 100.0)
         else:
             sx = 0
             ex = i.size[0]
             sy = 0
             ey = i.size[1]
 
-        o.offset_image.resize(ex - sx + 2 * o.borderwidth, ey - sy + 2 * o.borderwidth)
+        operation.offset_image.resize(ex - sx + 2 * operation.borderwidth, ey - sy + 2 * operation.borderwidth)
 
-        o.optimisation.pixsize = o.source_image_size_x / i.size[0]
-        simple.progress('pixel size in the image source', o.optimisation.pixsize)
+        operation.optimisation.pixsize = operation.source_image_size_x / i.size[0]
+        simple.progress('pixel size in the image source', operation.optimisation.pixsize)
 
         rawimage = imagetonumpy(i)
         maxa = numpy.max(rawimage)
         mina = numpy.min(rawimage)
         a = numpy.array((1.0, 1.0))
-        a.resize(2 * o.borderwidth + i.size[0], 2 * o.borderwidth + i.size[1])
-        neg = o.source_image_scale_z < 0
-        if o.strategy == 'WATERLINE':  # waterline strategy needs image border to have ok ambient.
+        a.resize(2 * operation.borderwidth + i.size[0], 2 * operation.borderwidth + i.size[1])
+        neg = operation.source_image_scale_z < 0
+        if operation.strategy == 'WATERLINE':  # waterline strategy needs image border to have ok ambient.
             a.fill(1 - neg)
 
         else:  # other operations like parallel need to reach the border
             a.fill(neg)  #
         # 2*o.borderwidth
-        a[o.borderwidth:-o.borderwidth, o.borderwidth:-o.borderwidth] = rawimage
-        a = a[sx:ex + o.borderwidth * 2, sy:ey + o.borderwidth * 2]
+        a[operation.borderwidth:-operation.borderwidth, operation.borderwidth:-operation.borderwidth] = rawimage
+        a = a[sx:ex + operation.borderwidth * 2, sy:ey + operation.borderwidth * 2]
 
-        if o.source_image_scale_z < 0:
+        if operation.source_image_scale_z < 0:
             # negative images place themselves under the 0 plane by inverting through scale multiplication
             a = (a - mina)  # first, put the image down, se we know the image minimum is on 0
-            a *= o.source_image_scale_z
+            a *= operation.source_image_scale_z
 
         else:  # place positive images under 0 plane, this is logical
             a = (a - mina)  # first, put the image down, se we know the image minimum is on 0
-            a *= o.source_image_scale_z
-            a -= (maxa - mina) * o.source_image_scale_z
+            a *= operation.source_image_scale_z
+            a -= (maxa - mina) * operation.source_image_scale_z
 
-        a += o.source_image_offset.z  # after that, image gets offset.
+        a += operation.source_image_offset.z  # after that, image gets offset.
 
-        o.minz = numpy.min(a)  # TODO: I really don't know why this is here...
-        o.min.z = numpy.min(a)
-        print('min z ', o.min.z)
-        print('max z ', o.max.z)
+        operation.minz = numpy.min(a)  # TODO: I really don't know why this is here...
+        operation.min.z = numpy.min(a)
+        print('min z ', operation.min.z)
+        print('max z ', operation.max.z)
         print('max image ', numpy.max(a))
         print('min image ', numpy.min(a))
-        o.zbuffer_image = a
+        operation.zbuffer_image = a
     # progress('got z buffer also with conversion in:')
     simple.progress(time.time() - t)
 
-    # progress(a)
-    o.update_zbufferimage_tag = False
-    return o.zbuffer_image
-
-
-# return numpy.array([])
+    operation.update_zbufferimage_tag = False
+    return operation.zbuffer_image
 
 def prepareArea(o):
-    # if not o.use_exact:
     renderSampleImage(o)
     samples = o.zbuffer_image
 

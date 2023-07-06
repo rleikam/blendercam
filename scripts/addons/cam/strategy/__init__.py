@@ -1,4 +1,4 @@
-from .compound import compound
+from .compound import carving, parallel, cross, block, circles, outlinefill, pencil, spiral, crazy
 from .curve import curve
 from .cutout import cutout
 from .drill import drill

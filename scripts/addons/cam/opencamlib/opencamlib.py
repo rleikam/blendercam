@@ -11,8 +11,6 @@ except ImportError:
 import os
 import tempfile
 from subprocess import call
-from cam.collision import BULLET_SCALE
-from cam import simple
 from cam.chunk import camPathChunk
 from cam.simple import *
 from shapely import geometry as sgeometry
@@ -30,15 +28,15 @@ def pointSamplesFromOCL(points, samples):
 
 def chunkPointSamplesFromOCL(chunks, samples):
     s_index = 0
-    for ch in chunks:
+    for chunk in chunks:
         p_index = 0
-        for point in ch.points:
+        for point in chunk.points:
             if len(point) == 2 or point[2] != 2:
                 z_sample = samples[s_index].z / OCL_SCALE
-                ch.points[p_index] = (point[0], point[1], z_sample)
+                chunk.points[p_index] = (point[0], point[1], z_sample)
             # print(str(point[2]))
             else:
-                ch.points[p_index] = (point[0], point[1], 1)
+                chunk.points[p_index] = (point[0], point[1], 1)
             p_index += 1
             s_index += 1
 
@@ -55,7 +53,6 @@ def chunkPointsResampleFromOCL(chunks, samples):
                 ch.points[p_index] = (point[0], point[1], 1)
             p_index += 1
             s_index += 1
-
 
 def exportModelsToSTL(operation):
     file_number = 0
@@ -77,16 +74,14 @@ def exportModelsToSTL(operation):
         bpy.ops.object.delete()
         file_number += 1
 
-
 def oclSamplePoints(operation, points):
     samples = ocl_sample(operation, points)
     pointSamplesFromOCL(points, samples)
 
-
 def oclSample(operation, chunks):
     samples = ocl_sample(operation, chunks)
+    
     chunkPointSamplesFromOCL(chunks, samples)
-
 
 def oclResampleChunks(operation, chunks_to_resample):
     tmp_chunks = list()
@@ -95,7 +90,6 @@ def oclResampleChunks(operation, chunks_to_resample):
         for p_index in range(i_start, i_start + i_length):
             tmp_chunks[0].append(chunk.points[p_index])
  
-
     samples = ocl_sample(operation, tmp_chunks)
 
     sample_index = 0
@@ -105,7 +99,6 @@ def oclResampleChunks(operation, chunks_to_resample):
             sample_index += 1
             if z > chunk.points[p_index][2]:
                 chunk.points[p_index][2] = z
-
 
 def oclWaterlineLayerHeights(operation):
     layers = []
@@ -126,7 +119,6 @@ def oclGetMedialAxis(operation, chunks):
     call([PYTHON_BIN, os.path.join(bpy.utils.script_path_pref(), "addons", "cam", "opencamlib", "ocl.py")])
     waterlineChunksFromOCL(operation, chunks)
 
-
 def oclGetWaterline(operation, chunks):
     layers = oclWaterlineLayerHeights(operation)
     oclSTL = get_oclSTL(operation)
@@ -138,7 +130,7 @@ def oclGetWaterline(operation, chunks):
         op_cutter_tip_angle = operation['cutter_tip_angle']
 
     cutter = None
-    cutter_length = 150 #TODO: automatically determine necessary cutter length depending on object size
+    cutter_length = 150
 
     if op_cutter_type == 'END':
         cutter = ocl.CylCutter((op_cutter_diameter + operation.skin * 2) * 1000, cutter_length)
@@ -150,11 +142,10 @@ def oclGetWaterline(operation, chunks):
         print("Cutter unsupported: {0}\n".format(op_cutter_type))
         quit()
 
-
     waterline = ocl.Waterline()
     waterline.setSTL(oclSTL)
     waterline.setCutter(cutter)
-    waterline.setSampling(0.1)#TODO: add sampling setting to UI
+    waterline.setSampling(0.1)
     for height in layers:
         print(str(height) + '\n')
         waterline.reset()
@@ -169,4 +160,3 @@ def oclGetWaterline(operation, chunks):
             chunks[-1].closed = True
             chunks[-1].poly = sgeometry.Polygon(chunks[-1].points)
 
-# def oclFillMedialAxis(operation):

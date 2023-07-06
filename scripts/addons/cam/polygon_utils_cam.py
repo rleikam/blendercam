@@ -112,7 +112,6 @@ def shapelyToCoords(geometry):
 
     return geometrySequence
 
-
 def shapelyToCurve(name, p, z):
     import bpy
     from bpy_extras import object_utils
@@ -140,4 +139,4 @@ def shapelyToCurve(name, p, z):
     for coordinate in objectData.data.splines:
         coordinate.use_cyclic_u = True
 
-    return objectData  # bpy.context.active_object
+    return objectData 

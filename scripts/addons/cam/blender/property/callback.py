@@ -1,65 +1,65 @@
 from cam import utils
 import bpy
 
-def updateBridges(o, context):
+def updateBridges(operation, context):
     print('update bridges ')
-    o.changed = True
+    operation.changed = True
 
-def updateRotation(o, context):
-    if o.enable_B or o.enable_A:
-        print(o, o.rotation_A)
-        ob = bpy.data.objects[o.object_name]
+def updateRotation(operation, context):
+    if operation.enable_B or operation.enable_A:
+        print(operation, operation.rotation_A)
+        ob = bpy.data.objects[operation.object_name]
         ob.select_set(True)
         bpy.context.view_layer.objects.active = ob
-        if o.A_along_x:  # A parallel with X
-            if o.enable_A:
-                bpy.context.active_object.rotation_euler.x = o.rotation_A
-            if o.enable_B:
-                bpy.context.active_object.rotation_euler.y = o.rotation_B
+        if operation.A_along_x:  # A parallel with X
+            if operation.enable_A:
+                bpy.context.active_object.rotation_euler.x = operation.rotation_A
+            if operation.enable_B:
+                bpy.context.active_object.rotation_euler.y = operation.rotation_B
         else:  # A parallel with Y
-            if o.enable_A:
-                bpy.context.active_object.rotation_euler.y = o.rotation_A
-            if o.enable_B:
-                bpy.context.active_object.rotation_euler.x = o.rotation_B
+            if operation.enable_A:
+                bpy.context.active_object.rotation_euler.y = operation.rotation_A
+            if operation.enable_B:
+                bpy.context.active_object.rotation_euler.x = operation.rotation_B
 
-def updateOpencamlib(o, context):
+def updateOpencamlib(operation, context):
     print('update opencamlib ')
-    o.changed = True
-    if o.optimisation.use_opencamlib and (
-            o.strategy == 'POCKET' or o.strategy == 'MEDIAL_AXIS'):
-        o.optimisation.use_exact = False
-        o.optimisation.use_opencamlib = False
+    operation.changed = True
+    if operation.optimisation.use_opencamlib and (
+            operation.strategy == 'POCKET' or operation.strategy == 'MEDIAL_AXIS'):
+        operation.optimisation.use_exact = False
+        operation.optimisation.use_opencamlib = False
         print('Current operation cannot use opencamlib')
 
 def updateRest(self, context):
     print('update rest ')
     self.changed = True
 
-def updateExact(o, context):
+def updateExact(operation, context):
     print('update exact ')
-    o.changed = True
-    o.update_zbufferimage_tag = True
-    o.update_offsetimage_tag = True
-    if o.optimisation.use_exact:
-        if o.strategy == 'POCKET' or o.strategy == 'MEDIAL_AXIS' or o.inverse:
-            o.optimisation.use_opencamlib = False
+    operation.changed = True
+    operation.update_zbufferimage_tag = True
+    operation.update_offsetimage_tag = True
+    if operation.optimisation.use_exact:
+        if operation.strategy == 'POCKET' or operation.strategy == 'MEDIAL_AXIS' or operation.inverse:
+            operation.optimisation.use_opencamlib = False
             print('Current operation cannot use exact mode')
     else:
-        o.optimisation.use_opencamlib = False
+        operation.optimisation.use_opencamlib = False
 
 def updateCutout(o, context):
     pass
 
-def updateStrategy(o, context):
+def updateStrategy(operation, context):
     """"""
-    o.changed = True
+    operation.changed = True
     print('update strategy')
-    if o.machine_axes == '5' or (
-            o.machine_axes == '4' and o.strategy4axis == 'INDEXED'):  # INDEXED 4 AXIS DOESN'T EXIST NOW...
-        utils.addOrientationObject(o)
+    if operation.machine_axes == '5' or (
+            operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):  # INDEXED 4 AXIS DOESN'T EXIST NOW...
+        utils.addOrientationObject(operation)
     else:
-        utils.removeOrientationObject(o)
-    updateExact(o, context)
+        utils.removeOrientationObject(operation)
+    updateExact(operation, context)
 
 def updateZbufferImage(self, context):
     """changes tags so offset and zbuffer images get updated on calculation time."""
@@ -73,9 +73,9 @@ def updateZbufferImage(self, context):
 def updateChipload(self, context):
     """this is very simple computation of chip size, could be very much improved"""
     print('update chipload ')
-    o = self
+    operation = self
     # Old chipload
-    o.info.chipload = (o.feedrate / (o.spindle_rpm * o.cutter_flutes))
+    operation.info.chipload = (operation.feedrate / (operation.spindle_rpm * operation.cutter_flutes))
     # New chipload with chip thining compensation.
     # I have tried to combine these 2 formulas to compinsate for the phenomenon of chip thinning when cutting at less
     # than 50% cutter engagement with cylindrical end mills. formula 1 Nominal Chipload is
@@ -89,7 +89,7 @@ def updateChipload(self, context):
     # we will be one tiny step on the way to a slightly better chipload calculating function.
 
     # self.chipload = ((0.5*(o.cutter_diameter/o.dist_between_paths))/(math.sqrt((o.feedrate*1000)/(o.spindle_rpm*o.cutter_diameter*o.cutter_flutes)*(o.cutter_diameter/o.dist_between_paths)-1)))
-    print(o.info.chipload)
+    print(operation.info.chipload)
 
 def updateOffsetImage(self, context):
     """refresh offset image tag for rerendering"""
@@ -99,45 +99,46 @@ def updateOffsetImage(self, context):
     self.update_offsetimage_tag = True
 
 def operationValid(self, context):
-    o = self
-    o.changed = True
-    o.valid = True
+    operation = self
+    operation.changed = True
+    operation.valid = True
     invalidmsg = "Operation has no valid data input\n"
-    o.info.warnings = ""
-    o = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
-    if o.geometry_source == 'OBJECT':
-        if o.object_name not in bpy.data.objects:
-            o.valid = False
-            o.info.warnings = invalidmsg
-    if o.geometry_source == 'COLLECTION':
-        if o.collection_name not in bpy.data.collections:
-            o.valid = False
-            o.info.warnings = invalidmsg
-        elif len(bpy.data.collections[o.collection_name].objects) == 0:
-            o.valid = False
-            o.info.warnings = invalidmsg
+    operation.info.warnings = ""
+    operation = bpy.context.scene.cam_operations[bpy.context.scene.cam_active_operation]
+    if operation.geometry_source == 'OBJECT':
+        if operation.object_name not in bpy.data.objects:
+            operation.valid = False
+            operation.info.warnings = invalidmsg
 
-    if o.geometry_source == 'IMAGE':
-        if o.source_image_name not in bpy.data.images:
-            o.valid = False
-            o.info.warnings = invalidmsg
+    if operation.geometry_source == 'COLLECTION':
+        if operation.collection_name not in bpy.data.collections:
+            operation.valid = False
+            operation.info.warnings = invalidmsg
+        elif len(bpy.data.collections[operation.collection_name].objects) == 0:
+            operation.valid = False
+            operation.info.warnings = invalidmsg
 
-        o.optimisation.use_exact = False
-    o.update_offsetimage_tag = True
-    o.update_zbufferimage_tag = True
+    if operation.geometry_source == 'IMAGE':
+        if operation.source_image_name not in bpy.data.images:
+            operation.valid = False
+            operation.info.warnings = invalidmsg
+
+        operation.optimisation.use_exact = False
+    operation.update_offsetimage_tag = True
+    operation.update_zbufferimage_tag = True
     print('validity ')
 
 was_hidden_dict = {}
 
 def updateOperation(self, context):
     scene = context.scene
-    ao = scene.cam_operations[scene.cam_active_operation]
+    activeOperation = scene.cam_operations[scene.cam_active_operation]
 
-    if ao.hide_all_others:
+    if activeOperation.hide_all_others:
         for _ao in scene.cam_operations:
             if _ao.path_object_name in bpy.data.objects:
                 other_obj = bpy.data.objects[_ao.path_object_name]
-                current_obj = bpy.data.objects[ao.path_object_name]
+                current_obj = bpy.data.objects[activeOperation.path_object_name]
                 if other_obj != current_obj:
                     other_obj.hide = True
                     other_obj.select = False
@@ -155,12 +156,12 @@ def updateOperation(self, context):
     bpy.ops.object.select_all(action='DESELECT')
     # highlight the cutting path if it exists
     try:
-        ob = bpy.data.objects[ao.path_object_name]
+        ob = bpy.data.objects[activeOperation.path_object_name]
         ob.select_set(state=True, view_layer=None)
         # Show object if, it's was hidden
         if ob.hide:
             ob.hide = False
-            was_hidden_dict[ao.path_object_name] = True
+            was_hidden_dict[activeOperation.path_object_name] = True
         bpy.context.scene.objects.active = ob
     except Exception as e:
         print(e)

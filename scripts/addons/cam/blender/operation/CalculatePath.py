@@ -13,23 +13,23 @@ class CalculatePath(Operator):
     operationIndex: IntProperty(name="Operation", description="Specify the operation to calculate")
 
     def execute(self, context):
-        print("CALCULATE")
-
         scene = bpy.context.scene
         operation = scene.cam_operations[self.operationIndex]
         if operation.geometry_source == 'OBJECT':
             ob = bpy.data.objects[operation.object_name]
             ob.hide_set(False)
+
         if operation.geometry_source == 'COLLECTION':
             objectCollection = bpy.data.collections[operation.collection_name]
             for ob in objectCollection.objects:
                 ob.hide_set(False)
+
         if operation.strategy == "CARVE":
-            curvob = bpy.data.objects[operation.curve_object]
-            curvob.hide_set(False)
-        print(bpy.context.mode)
+            curveObject = bpy.data.objects[operation.curve_object]
+            curveObject.hide_set(False)
+
         if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')     # force object mode
+            bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
         camPath = utils.getCAMPathObjectNameConventionFrom(operation.name)
@@ -50,11 +50,13 @@ class CalculatePath(Operator):
 
         if operation.use_layers:
             operation.parallel_step_back = False
+
         try:
             gcodepath.getPath(context, operation)
         except CamException as e:
             self.report({'ERROR'},str(e))
             return {'CANCELLED'}
+        
         coll = bpy.data.collections.get('RigidBodyWorld')
         if coll:
             bpy.data.collections.remove(coll)

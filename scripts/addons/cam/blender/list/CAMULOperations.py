@@ -18,8 +18,8 @@ import bpy
 class CAMULOperations(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         itemColumn = layout.column()
-        mainRow = itemColumn.column_flow(columns=2, align=False)
-        row = mainRow.row(align=True)
+
+        mainRow = itemColumn.row(align=True)
         nameIconID = context.scene.previewCollection["name"].icon_id
 
         foundRowExpansions = (rowExpansion for rowExpansion in context.scene.cam_operation_expansions if rowExpansion.operationName == item.name)
@@ -27,35 +27,35 @@ class CAMULOperations(UIList):
 
         expansionIconID = "TRIA_RIGHT" if foundExpansion.operationCollapsed else "TRIA_DOWN"
 
-        expandedButton = row.operator(ExpandOperation.bl_idname, text="", icon=expansionIconID, emboss=False)
+        expandedButton = mainRow.operator(ExpandOperation.bl_idname, text="", icon=expansionIconID, emboss=False)
         expandedButton.operationName = item.name
 
-        row.prop(item, "name", text="", icon_value=nameIconID, emboss=False)
-        row.prop(item, "filename", icon="FILE", text="", emboss=False)
-        row.prop(item, 'geometry_source', text="")
+        mainRow.prop(item, "name", text="", icon_value=nameIconID, emboss=False)
+        mainRow.prop(item, "filename", icon="FILE", text="", emboss=False)
+        mainRow.prop(item, 'geometry_source', text="")
 
         if item.strategy == 'CURVE':
             if item.geometry_source == 'OBJECT':
-                row.prop_search(item, "object_name", bpy.data, "objects", text="")
+                mainRow.prop_search(item, "object_name", bpy.data, "objects", text="")
             elif item.geometry_source == 'COLLECTION':
-                row.prop_search(item, "collection_name", bpy.data, "collections", text="")
+                mainRow.prop_search(item, "collection_name", bpy.data, "collections", text="")
         else:
             if item.geometry_source == 'OBJECT':
-                row.prop_search(item, "object_name", bpy.data, "objects", text="")
+                mainRow.prop_search(item, "object_name", bpy.data, "objects", text="")
                 if item.enable_A:
-                    self.layout.prop(item, 'rotation_A')
+                    layout.prop(item, 'rotation_A')
                 if item.enable_B:
-                    self.layout.prop(item, 'rotation_B')
+                    layout.prop(item, 'rotation_B')
 
             elif item.geometry_source == 'COLLECTION':
-                row.prop_search(item, "collection_name", bpy.data, "collections", text="")
+                mainRow.prop_search(item, "collection_name", bpy.data, "collections", text="")
             else:
-                row.prop_search(item, "source_image_name", bpy.data, "images", text="")
+                mainRow.prop_search(item, "source_image_name", bpy.data, "images", text="")
 
         if item.strategy in ['CARVE', 'PROJECTED_CURVE']:
-            row.prop_search(item, "curve_object", bpy.data, "objects", text="")
+            mainRow.prop_search(item, "curve_object", bpy.data, "objects", text="")
             if item.strategy == 'PROJECTED_CURVE':
-                row.prop_search(item, "curve_object1", bpy.data, "objects", text="")
+                mainRow.prop_search(item, "curve_object1", bpy.data, "objects", text="")
 
         buttonRow = mainRow.row(align=True)
         buttonRow.alignment = "RIGHT"
@@ -87,58 +87,58 @@ class CAMULOperations(UIList):
         downOperator.direction = "DOWN"
         downOperator.operationIndex = index
 
-        buttonRow.operator(CamOperationRemove.bl_idname, icon='REMOVE', text="", emboss=False)
+        operationRemoveButton = buttonRow.operator(CamOperationRemove.bl_idname, icon='REMOVE', text="", emboss=False)
+        operationRemoveButton.operationIndex = index
 
         if not foundExpansion.operationCollapsed:
-            # Operation options
-            operationOptionsRow = itemColumn.row(align=True)
-            operationOptionsRow.label(text="     Options")
-            operationOptionsElementsRow = operationOptionsRow.grid_flow(row_major=True, align=True)
-            self.draw_operation_options(item, operationOptionsElementsRow)
-
-            operationCutterRow = itemColumn.row(align=True)
-            operationCutterRow.label(text="     Cutter")
-            operationCutterElementsRow = operationCutterRow.grid_flow(row_major=True, align=True)
-            self.draw_operation_tool(item, operationCutterElementsRow)
-
-            operationFeedrateRow = itemColumn.row(align=True)
-            operationFeedrateRow.label(text="     Feedrate")
-            operationFeedrateElementsRow = operationFeedrateRow.grid_flow(row_major=True, align=True)
-            self.draw_feedrate(item, operationFeedrateElementsRow)
-
-            operationMovementRow = itemColumn.row(align=True)
-            operationMovementRow.label(text="     Movement")
-            operationMovementElementsRow = operationMovementRow.grid_flow(row_major=True, align=True)
-            self.draw_movement(item, operationMovementElementsRow)
-
-            operationAreaRow = itemColumn.row(align=True)
-            operationAreaRow.label(text="     Area")
-            operationAreaElementsRow = operationAreaRow.grid_flow(row_major=True, align=True)
-            self.draw_area(item, operationAreaElementsRow)
-
-            operationOptimizationRow = itemColumn.row(align=True)
-            operationOptimizationRow.label(text="     Optimization")
-            operationOptimizationElementsRow = operationOptimizationRow.grid_flow(row_major=True, align=True)
-            self.draw_optimization(item, operationOptimizationElementsRow)
-
-            operationGCodeRow = itemColumn.row(align=True)
-            operationGCodeRow.label(text="     G-Code")
-            operationGCodeElementsRow = operationGCodeRow.grid_flow(row_major=True, align=True)
-            self.draw_gcode(item, operationGCodeElementsRow)
-
-            operationMaterialRow = itemColumn.row(align=True)
-            operationMaterialRow.label(text="     Material")
-            operationMaterialElementsRow = operationMaterialRow.grid_flow(row_major=True, align=True)
-            self.draw_material(item, operationMaterialElementsRow)
-
-            operationOperationPropertiesRow = itemColumn.row(align=True)
+            operationOperationPropertiesRow = itemColumn.split(factor=0.1)
             operationOperationPropertiesRow.label(text="     Operation")
-            operationOperationPropertiesElementsRow = operationOperationPropertiesRow.grid_flow(row_major=True, align=True)
+            operationOperationPropertiesElementsRow = operationOperationPropertiesRow.column(align=True)
             self.draw_operation_properties(item, operationOperationPropertiesElementsRow)
 
-            operationInfoRow = itemColumn.row(align=True)
+            operationCutterRow = itemColumn.split(factor=0.1)
+            operationCutterRow.label(text="     Cutter")
+            operationCutterElementsRow = operationCutterRow.column(align=True)
+            self.draw_operation_tool(item, operationCutterElementsRow)
+
+            operationFeedrateRow = itemColumn.split(factor=0.1)
+            operationFeedrateRow.label(text="     Feedrate")
+            operationFeedrateElementsRow = operationFeedrateRow.column(align=True)
+            self.draw_feedrate(item, operationFeedrateElementsRow)
+
+            operationMovementRow = itemColumn.split(factor=0.1)
+            operationMovementRow.label(text="     Movement")
+            operationMovementElementsRow = operationMovementRow.column(align=True)
+            self.draw_movement(item, operationMovementElementsRow)
+
+            operationAreaRow = itemColumn.split(factor=0.1)
+            operationAreaRow.label(text="     Area")
+            operationAreaElementsRow = operationAreaRow.column(align=True)
+            self.draw_area(item, operationAreaElementsRow)
+
+            operationOptimizationRow = itemColumn.split(factor=0.1)
+            operationOptimizationRow.label(text="     Optimization")
+            operationOptimizationElementsRow = operationOptimizationRow.column(align=True)
+            self.draw_optimization(item, operationOptimizationElementsRow)
+
+            operationGCodeRow = itemColumn.split(factor=0.1)
+            operationGCodeRow.label(text="     G-Code")
+            operationGCodeElementsRow = operationGCodeRow.column(align=True)
+            self.draw_gcode(item, operationGCodeElementsRow)
+
+            operationMaterialRow = itemColumn.split(factor=0.1)
+            operationMaterialRow.label(text="     Material")
+            operationMaterialElementsRow = operationMaterialRow.column(align=True)
+            self.draw_material(item, operationMaterialElementsRow)
+
+            operationOptionsRow = itemColumn.split(factor=0.1)
+            operationOptionsRow.label(text="     Options")
+            operationOptionsElementsRow = operationOptionsRow.column(align=True)
+            self.draw_operation_options(item, operationOptionsElementsRow)
+
+            operationInfoRow = itemColumn.split(factor=0.1)
             operationInfoRow.label(text="     Info")
-            operationInfoElementsRow = operationInfoRow.grid_flow(row_major=True, align=True)
+            operationInfoElementsRow = operationInfoRow.column(align=True)
             self.draw_info(item, operationInfoElementsRow)
 
     def draw_info(self, item, layout):
@@ -161,9 +161,8 @@ class CAMULOperations(UIList):
             layout.label(text=chipload)
 
         if int(item.info.duration * 60) > 0:
-            row = layout.row()
-            row.label(text='Hourly Rate')
-            row.prop(bpy.context.scene.cam_machine, 'hourly_rate', text='')
+            layout.label(text='Hourly Rate')
+            layout.prop(bpy.context.scene.cam_machine, 'hourly_rate', text='')
 
             if float(bpy.context.scene.cam_machine.hourly_rate) < 0.01:
                 return
@@ -315,7 +314,6 @@ class CAMULOperations(UIList):
                 layout.prop(item, 'array_y_count')
                 layout.prop(item, 'array_y_distance')
 
-
     def draw_material(self, item, layout):
         if item.geometry_source not in ['OBJECT', 'COLLECTION']:
             layout.label(text='Estimated from image')
@@ -324,16 +322,14 @@ class CAMULOperations(UIList):
         layout.prop(item.material, 'estimate_from_model')
 
         if item.material.estimate_from_model:
-            row_radius = layout.row()
-            row_radius.label(text="Additional radius")
-            row_radius.prop(item.material, 'radius_around_model', text='')
+            layout.label(text="Additional radius")
+            layout.prop(item.material, 'radius_around_model', text='')
         else:
             layout.prop(item.material, 'origin')
             layout.prop(item.material, 'size')
 
-            row_axis = layout.row()
-            row_axis.prop(item.material, 'center_x')
-            row_axis.prop(item.material, 'center_y')
+            layout.prop(item.material, 'center_x')
+            layout.prop(item.material, 'center_y')
             layout.prop(item.material, 'z_position')
             layout.operator("object.material_cam_position", text="Position object")
 
@@ -363,11 +359,6 @@ class CAMULOperations(UIList):
         if item.optimisation.optimize:
             layout.prop(item.optimisation, 'optimize_threshold')
 
-        if item is None:
-            return
-        if not item.valid:
-            return
-
         if not item.geometry_source in ["OBJECT", "COLLECTION"]:
             return
 
@@ -379,9 +370,8 @@ class CAMULOperations(UIList):
 
         if not exact_possible or not item.optimisation.use_exact:
 
-            row = layout.row(align=True)
-            row.prop(item.optimisation, 'pixsize')
-            row.prop(item.optimisation, 'imgres_limit')
+            layout.prop(item.optimisation, 'pixsize')
+            layout.prop(item.optimisation, 'imgres_limit')
 
             sx = item.max.x - item.min.x
             sy = item.max.y - item.min.y
@@ -395,7 +385,7 @@ class CAMULOperations(UIList):
         if not (exact_possible and item.optimisation.use_exact):
             return
 
-        opencamlib_version = cam.utils.opencamlib_version()
+        opencamlib_version = utils.opencamlib_version()
 
         if opencamlib_version is None:
             layout.label(text="Opencamlib is not available ")
@@ -439,13 +429,12 @@ class CAMULOperations(UIList):
                     layout.label(text='image size on y axis: ' + strInUnits(sy, 8))
                     layout.separator()
             layout.prop(item, 'source_image_offset')
-            col = layout.column(align=True)
-            col.prop(item, 'source_image_crop', text='Crop source image')
+            layout.prop(item, 'source_image_crop', text='Crop source image')
             if item.source_image_crop:
-                col.prop(item, 'source_image_crop_start_x', text='start x')
-                col.prop(item, 'source_image_crop_start_y', text='start y')
-                col.prop(item, 'source_image_crop_end_x', text='end x')
-                col.prop(item, 'source_image_crop_end_y', text='end y')
+                layout.prop(item, 'source_image_crop_start_x', text='start x')
+                layout.prop(item, 'source_image_crop_start_y', text='start y')
+                layout.prop(item, 'source_image_crop_end_x', text='end x')
+                layout.prop(item, 'source_image_crop_end_y', text='end y')
 
         if item.strategy in ['BLOCK', 'SPIRAL', 'CIRCLES', 'PARALLEL', 'CROSS']:
             layout.prop(item, 'ambient_behaviour')

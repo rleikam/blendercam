@@ -1,109 +1,257 @@
 import bpy
-import time
-import mathutils
-import math
 from math import *
 from mathutils import *
 from bpy.props import *
 
 from cam.strategy import *
 
-import numpy
-
-import cam.strategy as test
-from cam import chunk
 from cam.chunk import *
-
-from cam import collision
 from cam.collision import *
-
-from cam import simple
 from cam.simple import *
-
-from cam import bridges
 from cam.bridges import *
-
-from cam import utils
-from cam import strategy
-
-from cam import pattern
 from cam.pattern import *
-
-from cam import polygon_utils_cam
 from cam.polygon_utils_cam import *
-
-from cam import image_utils
 from cam.image_utils import *
 from cam.opencamlib.opencamlib import *
-from cam.nc import iso
 
-def compound(operation):
-    if operation.strategy == 'CARVE':
-        pathSamples = []
-        object = bpy.data.objects[operation.curve_object]
-        pathSamples.extend(curveToChunks(object))
-        pathSamples = utils.sortChunks(pathSamples, operation)  # sort before sampling
-        pathSamples = chunksRefine(pathSamples, operation)
-    elif operation.strategy == 'PENCIL':
-        prepareArea(operation)
-        utils.getAmbient(operation)
-        pathSamples = getOffsetImageCavities(operation, operation.offset_image)
-        pathSamples = limitChunks(pathSamples, operation)
-        pathSamples = utils.sortChunks(pathSamples, operation)  # sort before sampling
-    elif operation.strategy == 'CRAZY':
-        prepareArea(operation)
-        # pathSamples = crazyStrokeImage(o)
-        # this kind of worked and should work:
-        millarea = operation.zbuffer_image < operation.minz + 0.000001
-        avoidarea = operation.offset_image > operation.minz + 0.000001
+from .utility import getLayers, chunksToMesh, sortChunks, getOperationSilhouete, connectChunksLow, getAmbient, chunksCoherency, sampleChunks, printProgressionTitle
+from ..blender.property.CamOperation import CamOperation
 
-        pathSamples = crazyStrokeImageBinary(operation, millarea, avoidarea)
-        #####
-        pathSamples = utils.sortChunks(pathSamples, operation)
-        pathSamples = chunksRefine(pathSamples, operation)
+def carving(operation: CamOperation):
+    printProgressionTitle("CARVE")
 
-    else:
-        print("PARALLEL")
-        if operation.strategy == 'OUTLINEFILL':
-            utils.getOperationSilhouete(operation)
-
-        pathSamples = getPathPattern(operation)
-
-        if operation.strategy == 'OUTLINEFILL':
-            pathSamples = utils.sortChunks(pathSamples, operation)
-            # have to be sorted once before, because of the parenting inside of samplechunks
-
-        if operation.strategy in ['BLOCK', 'SPIRAL', 'CIRCLES']:
-            pathSamples = utils.connectChunksLow(pathSamples, operation)
-
-    # print (minz)
+    object = bpy.data.objects[operation.curve_object]
+    pathSamples = curveToChunks(object)
+    pathSamples = sortChunks(pathSamples, operation)
+    pathSamples = chunksRefine(pathSamples, operation)
 
     chunks = []
-    layers = strategy.getLayers(operation, operation.maxz, operation.min.z)
+    layers = getLayers(operation, operation.maxz, operation.min.z)
 
     print("SAMPLE", operation.name)
-    chunks.extend(utils.sampleChunks(operation, pathSamples, layers))
+    chunks = sampleChunks(operation, pathSamples, layers)
     print("SAMPLE OK")
-    if operation.strategy == 'PENCIL':  # and bpy.app.debug_value==-3:
-        chunks = chunksCoherency(chunks)
-        print('coherency check')
 
-    if operation.strategy in ['PARALLEL', 'CROSS', 'PENCIL', 'OUTLINEFILL']:  # and not o.parallel_step_back:
-        print('sorting')
-        chunks = utils.sortChunks(chunks, operation)
-        if operation.strategy == 'OUTLINEFILL':
-            chunks = utils.connectChunksLow(chunks, operation)
     if operation.ramp:
-        for ch in chunks:
-            ch.rampZigZag(ch.zstart, ch.points[0][2], operation)
-    # print(chunks)
-    if operation.strategy == 'CARVE':
-        for ch in chunks:
-            for vi in range(0, len(ch.points)):
-                ch.points[vi] = (ch.points[vi][0], ch.points[vi][1], ch.points[vi][2] - operation.carve_depth)
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    for chunk in chunks:
+        for index in range(0, len(chunk.points)):
+            chunk.points[index] = (chunk.points[index][0], chunk.points[index][1], chunk.points[index][2] - operation.carve_depth)
+
     if operation.use_bridges:
         print(chunks)
-        for bridge_chunk in chunks:
-            useBridges(bridge_chunk, operation)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
 
-    strategy.chunksToMesh(chunks, operation)
+    chunksToMesh(chunks, operation)
+
+def parallel(operation: CamOperation):
+    printProgressionTitle("PARALLEL")
+
+    printProgressionTitle("CREATE PARALLEL PATTERN")
+    pathSamples = getPathPatternParallel(operation, operation.parallel_angle)
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    printProgressionTitle("SAMPLING CHUNKS")
+    chunks = sampleChunks(operation, pathSamples, layers)
+
+    printProgressionTitle("SORTING CHUNKS")
+    chunks = sortChunks(chunks, operation)
+
+    printProgressionTitle("SET RAMP")
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    printProgressionTitle("SET BRIDGES")
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    printProgressionTitle("CONVERT CHUNKS TO MESH")
+    chunksToMesh(chunks, operation)
+
+def outlinefill(operation: CamOperation):
+    printProgressionTitle("OUTLINE")
+
+    getOperationSilhouete(operation)
+    pathSamples = getPathPattern(operation)
+    pathSamples = sortChunks(pathSamples, operation)
+
+    chunks = []
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks.extend(sampleChunks(operation, pathSamples, layers))
+    print("SAMPLE OK")
+
+    print('sorting')
+    chunks = sortChunks(chunks, operation)
+    chunks = connectChunksLow(chunks, operation)
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)
+
+def pencil(operation: CamOperation):
+    printProgressionTitle("PENCIL")
+
+    prepareArea(operation)
+    getAmbient(operation)
+    pathSamples = getOffsetImageCavities(operation, operation.offset_image)
+    pathSamples = limitChunks(pathSamples, operation)
+    pathSamples = sortChunks(pathSamples, operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks = sampleChunks(operation, pathSamples, layers)
+
+    print("SAMPLE OK")
+
+    chunks = chunksCoherency(chunks)
+    print('coherency check')
+
+    print('sorting')
+    chunks = sortChunks(chunks, operation)
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)
+
+def block(operation):
+    printProgressionTitle("BLOCK")
+
+    printProgressionTitle("GET PATH PATTERN")
+    pathSamples = getPathPattern(operation)
+
+    printProgressionTitle("CONNECT CHUNKS LOW")
+    pathSamples = connectChunksLow(pathSamples, operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    printProgressionTitle("SAMPLE CHUNKS")
+    chunks = sampleChunks(operation, pathSamples, layers)
+
+    printProgressionTitle("SET RAMP")
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    printProgressionTitle("SET BRIDGES")
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    printProgressionTitle("CONVERT CHUNKS TO MESH")
+    chunksToMesh(chunks, operation)
+
+def spiral(operation: CamOperation):
+    pathSamples = getPathPattern(operation)
+    pathSamples = connectChunksLow(pathSamples, operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks = sampleChunks(operation, pathSamples, layers)
+    print("SAMPLE OK")
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)
+
+def cross(operation: CamOperation):
+    pathSamples = getPathPattern(operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks = sampleChunks(operation, pathSamples, layers)
+    print("SAMPLE OK")
+
+    print('sorting')
+    chunks = sortChunks(chunks, operation)
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)
+
+def circles(operation: CamOperation):
+    pathSamples = getPathPattern(operation)
+    pathSamples = connectChunksLow(pathSamples, operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks = sampleChunks(operation, pathSamples, layers)
+    print("SAMPLE OK")
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)
+
+def crazy(operation: CamOperation):
+    prepareArea(operation)
+
+    millarea = operation.zbuffer_image < operation.minz + 0.000001
+    avoidarea = operation.offset_image > operation.minz + 0.000001
+
+    pathSamples = crazyStrokeImageBinary(operation, millarea, avoidarea)
+    pathSamples = sortChunks(pathSamples, operation)
+    pathSamples = chunksRefine(pathSamples, operation)
+
+    layers = getLayers(operation, operation.maxz, operation.min.z)
+
+    print("SAMPLE", operation.name)
+    chunks = sampleChunks(operation, pathSamples, layers)
+    print("SAMPLE OK")
+
+    if operation.ramp:
+        for chunk in chunks:
+            chunk.rampZigZag(chunk.zstart, chunk.points[0][2], operation)
+
+    if operation.use_bridges:
+        print(chunks)
+        for bridgeChunk in chunks:
+            useBridges(bridgeChunk, operation)
+
+    chunksToMesh(chunks, operation)

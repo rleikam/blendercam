@@ -560,7 +560,6 @@ def getPath(context, operation):  # should do all path calculations.
     t1 = time.process_time() - expiredTime
     progress('total time', t1)
 
-
 def getChangeData(operation):
     """this is a function to check if object props have changed,
     to see if image updates are needed in the image based method"""
@@ -577,25 +576,24 @@ def getChangeData(operation):
 
     return changedata
 
+def checkMemoryLimit(operation):
+    length = operation.max.x - operation.min.x
+    height = operation.max.y - operation.min.y
 
-def checkMemoryLimit(o):
-    # utils.getBounds(o)
-    sx = o.max.x - o.min.x
-    sy = o.max.y - o.min.y
-    resx = sx / o.optimisation.pixsize
-    resy = sy / o.optimisation.pixsize
-    res = resx * resy
-    limit = o.optimisation.imgres_limit * 1000000
-    # print('co se to deje')
-    if res > limit:
-        ratio = (res / limit)
-        o.optimisation.pixsize = o.optimisation.pixsize * math.sqrt(ratio)
-        o.info.warnings += f"Memory limit: sampling resolution reduced to {o.optimisation.pixsize:.2e}\n"
-        print('changing sampling resolution to %f' % o.optimisation.pixsize)
+    resolutionX = length / operation.optimisation.pixsize
+    resolutionY = height / operation.optimisation.pixsize
+    resolution = resolutionX * resolutionY
+
+    limit = operation.optimisation.imgres_limit * 1000000
+
+    if resolution > limit:
+        ratio = (resolution / limit)
+        operation.optimisation.pixsize = operation.optimisation.pixsize * math.sqrt(ratio)
+        operation.info.warnings += f"Memory limit: sampling resolution reduced to {operation.optimisation.pixsize:.2e}\n"
+        print('changing sampling resolution to %f' % operation.optimisation.pixsize)
 
 def getPath3axis(context, operation):
-    scene = bpy.context.scene
-    operation = operation
+    scene = context.scene
     utils.getBounds(operation)
 
     match operation.strategy:
@@ -607,8 +605,24 @@ def getPath3axis(context, operation):
             strategy.projectCurve(scene, operation)
         case "POCKET":
             strategy.pocket(operation)
-        case "PARALLEL", "CROSS", "BLOCK", "SPIRAL", "CIRCLES", "OUTLINEFILL", "CARVE", "PENCIL", "CRAZY":
-            strategy.compound(operation)
+        case "PARALLEL":
+            strategy.parallel(operation)
+        case "CARVE":
+            strategy.carving(operation)
+        case "BLOCK":
+            strategy.block(operation)
+        case "SPIRAL":
+            strategy.spiral(operation)
+        case "CROSS":
+            strategy.cross(operation)
+        case "CIRCLES":
+            strategy.circles(operation)
+        case "OUTLINEFILL":
+            strategy.outlinefill(operation)
+        case "PENCIL":
+            strategy.pencil(operation)
+        case "CRAZY":
+            strategy.crazy(operation)
         case "WATERLINE" if operation.optimisation.use_opencamlib:
             strategy.waterlineOCL(operation)
         case "WATERLINE" if not operation.optimisation.use_opencamlib:

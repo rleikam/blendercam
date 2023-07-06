@@ -20,14 +20,7 @@ class CAMOperationsPanel(CAMButtonsPanel, Panel):
     # Main draw function
     def draw(self, context):
         self.draw_operations_list()
-
-        if (not self.has_operations()): return
-        if self.active_op is None: return
-
         self.draw_presets()
-
-        sub = self.layout.column()
-        sub.active = not self.active_op.computing
 
     # Draw the list of operations and the associated buttons:
     # create, delete, duplicate, reorder

@@ -106,7 +106,7 @@ def getLayers(operation, startdepth, enddepth):
 
     return layers
 
-def chunksToMesh(chunks, operation):
+def chunksToMesh(chunks : camPathChunk, operation):
     """convert sampled chunks to path, optimization of paths"""
     expiredTime = time.time()
     scene = bpy.context.scene

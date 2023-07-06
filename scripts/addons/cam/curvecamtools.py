@@ -108,6 +108,8 @@ class CamCurveIntarsion(bpy.types.Operator):
 
         currentObject = context.active_object
 
+        collectionFromObject = currentObject.users_collection[0]
+
         originalObjectSilhouette = utils.curveToShapely(currentObject)
         originalObjectSilhouette = shapely.ops.unary_union(originalObjectSilhouette)
 
@@ -121,13 +123,18 @@ class CamCurveIntarsion(bpy.types.Operator):
         profileObject = utils.shapelyToCurve(f"{currentObject.name}Profile", objectSilhouette, currentObject.location.z)
         pocketObject = utils.shapelyToCurve(f"{currentObject.name}Pocket", objectSilhouette, currentObject.location.z - self.intarsion_thickness)
 
+        utils.reassignObjectsToCollection([profileObject, pocketObject], collectionFromObject)
+
         if self.perimeter_cut > 0.0:
             perimeterSilhouette = originalObjectSilhouette.buffer(self.perimeter_cut, resolution=16)
             perimeterObject = utils.shapelyToCurve(f"{currentObject.name}Perimeter", perimeterSilhouette, -self.base_thickness)
+            utils.reassignObjectsToCollection([perimeterObject], collectionFromObject)
 
         if self.backlight > 0.0:
             backlightSilhouette = originalObjectSilhouette.buffer((-self.tolerance / 2) - self.backlight)
             backlightObject = utils.shapelyToCurve(f"{currentObject.name}Backlight", backlightSilhouette, -self.backlight_depth_from_top - self.intarsion_thickness)
+            utils.reassignObjectsToCollection([backlightObject], collectionFromObject)
+
 
         return {'FINISHED'}
 

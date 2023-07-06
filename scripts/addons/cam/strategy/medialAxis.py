@@ -82,7 +82,6 @@ def medialAxis(operation):
     print("No errors")
     print()
 
-
     printProgressionTitle("TESSELATE POLYGONS")
     def tesselatePoints(verticePoints):
         verticeCount = len(verticePoints)
