@@ -7,7 +7,7 @@ from..menu import ToolPresetsMenu
 class AddToolPreset(AddPresetBase, Operator):
     """Add a Cutter Preset"""
     bl_idname = "render.cam_preset_cutter_add"
-    bl_label = "Add Cutter Preset"
+    bl_label = "Add tool Preset"
     preset_menu = ToolPresetsMenu.bl_idname
 
     operationIndex: IntProperty()

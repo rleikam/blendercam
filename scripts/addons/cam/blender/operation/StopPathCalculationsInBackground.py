@@ -1,7 +1,7 @@
 from bpy.types import Operator
 import bpy
 
-class KillPathsBackground(Operator):
+class StopPathCalculationsInBackground(Operator):
     """Remove CAM path processes in background."""
     bl_idname = "object.kill_calculate_cam_paths_background"
     bl_label = "Kill background computation of an operation"

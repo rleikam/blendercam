@@ -1,5 +1,5 @@
 from bpy.types import Panel
-from ..operation.WM_OT_gcode_import import WM_OT_gcode_import
+from ..operation.ImportGCode import ImportGCode
 
 class CustomPanel(Panel):
     bl_space_type = 'VIEW_3D'
@@ -34,4 +34,4 @@ class CustomPanel(Panel):
 
         col = layout.column()
         col.scale_y = 2.0
-        col.operator(WM_OT_gcode_import.bl_idname)
+        col.operator(ImportGCode.bl_idname)

@@ -20,11 +20,11 @@ from .SimulateChain import *
 from .SliceObjects import *
 from .CalculateBasRelief import *
 from .ExpandOperation import *
-from .KillPathsBackground import *
+from .StopPathCalculationsInBackground import *
 from .ExportOperationPath import *
 from .ExportChainPaths import *
 from .CalculatePathsForAllOperations import *
-from .PathsBackground import *
+from .CalculatePathsInBackground import *
 from .CalculateChainPaths import *
 from .ProblemAreas import *
-from .WM_OT_gcode_import import *
+from .ImportGCode import *

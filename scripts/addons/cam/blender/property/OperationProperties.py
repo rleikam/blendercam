@@ -1,8 +1,8 @@
 import bpy, math
-from ..property.CAMInfoProperties import CAMInfoProperties
-from ..property.CAMMaterialProperties import CAMMaterialProperties
-from ..property.CAMOptimizationProperties import CAMOptimizationProperties
-from ..property.OperationListExpansions import OperationListExpansions
+from .InfoProperties import InfoProperties
+from .MaterialProperties import MaterialProperties
+from .OptimizationProperties import OptimizationProperties
+from .OperationListExpansionsProperties import OperationListExpansionsProperties
 
 from bpy.props import BoolProperty, FloatProperty, StringProperty, IntProperty, EnumProperty, PointerProperty, FloatVectorProperty
 
@@ -18,11 +18,11 @@ from .callback import operationValid, updateBridges, updateChipload, \
     updateRest, updateStrategy, updateZbufferImage, \
     getStrategyList, updateOperationName
 
-class CamOperation(bpy.types.PropertyGroup):
-    material: PointerProperty(type=CAMMaterialProperties)
-    info: PointerProperty(type=CAMInfoProperties)
-    optimisation: PointerProperty(type=CAMOptimizationProperties)
-    expansion: PointerProperty(type=OperationListExpansions)
+class OperationProperties(bpy.types.PropertyGroup):
+    material: PointerProperty(type=MaterialProperties)
+    info: PointerProperty(type=InfoProperties)
+    optimisation: PointerProperty(type=OptimizationProperties)
+    expansion: PointerProperty(type=OperationListExpansionsProperties)
 
     name: StringProperty(name="Operation Name", default="Operation", update=updateOperationName)
     filename: StringProperty(name="File name", default="Operation", subtype="FILE_PATH", update=updateRest)

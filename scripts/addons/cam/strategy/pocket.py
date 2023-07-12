@@ -15,12 +15,12 @@ from cam.image_utils import *
 
 from cam.strategy.utility import *
 
-from ..blender.property.CamOperation import *
+from ..blender.property.OperationProperties import *
 
 from shapely import geometry as sgeometry
 from shapely import affinity
 
-def pocket(operation: CamOperation):
+def pocket(operation: OperationProperties):
     printProgressionTitle("OPERATION: POCKET")
 
     simple.remove_multiple("3D_poc")

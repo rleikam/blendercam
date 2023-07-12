@@ -3,7 +3,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 
-class WM_OT_gcode_import(Operator, ImportHelper):
+class ImportGCode(Operator, ImportHelper):
     """Import Gcode, travel lines don't get drawn"""
     bl_idname = "wm.gcode_import"  # important since its how bpy.ops.import_test.some_data is constructed
     bl_label = "Import Gcode"

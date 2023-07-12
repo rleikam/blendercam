@@ -1,5 +1,4 @@
 from bpy.types import Operator
-import bpy
 from ...slice import sliceObject
 
 class SliceObjects(Operator):

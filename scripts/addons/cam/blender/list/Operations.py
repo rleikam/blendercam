@@ -1,6 +1,6 @@
 from ..operation import AddToolPreset
 from ..operation.CalculateOperationPath import CalculateOperationPath
-from ..operation.KillPathsBackground import KillPathsBackground
+from ..operation.StopPathCalculationsInBackground import StopPathCalculationsInBackground
 from ..operation.ExportOperationPath import ExportOperationPath
 from ..operation.SimulateOperation import SimulateOperation
 from ..operation.AddOperationToChain import AddOperationToChain
@@ -10,7 +10,7 @@ from ..operation.RemoveOperation import RemoveOperation
 from ..operation.AddBridges import AddBridges
 from ..operation.ExpandOperation import ExpandOperation
 from ..operation.PositionOperationObject import PositionOperationObject
-from ..property.CamOperation import *
+from ..property.OperationProperties import *
 
 from ..menu.ToolPresetsMenu import ToolPresetsMenu
 from cam import utils
@@ -22,7 +22,7 @@ import bpy
 class Operations(UIList):
     bl_idname = "CAM_UL_operations"
 
-    def draw_item(self, context, layout, data, item: CamOperation, icon, active_data, active_propname, index):
+    def draw_item(self, context, layout, data, item: OperationProperties, icon, active_data, active_propname, index):
         itemColumn = layout.column()
 
         mainRow = itemColumn.row(align=True)
@@ -57,7 +57,7 @@ class Operations(UIList):
         millPathSimulationId = context.scene.previewCollection["millSimulation"].icon_id
         if item.computing:
             buttonRow.label(text='computing')
-            buttonRow.operator(KillPathsBackground.KillPathsBackground.bl_idname, text="", icon='CANCEL', emboss=False)
+            buttonRow.operator(StopPathCalculationsInBackground.KillPathsBackground.bl_idname, text="", icon='CANCEL', emboss=False)
         else:
             buttonRow.operator(CalculateOperationPath.bl_idname, text="", icon_value=millIconId, emboss=False).operationIndex = index
 
@@ -137,7 +137,7 @@ class Operations(UIList):
             operationInfoElementsRow = operationInfoRow.column(align=True)
             self.draw_info(item, operationInfoElementsRow)
 
-    def draw_info(self, item: CamOperation, layout):
+    def draw_info(self, item: OperationProperties, layout):
         for line in item.info.warnings.rstrip("\n").split("\n"):
             if len(line) > 0:
                 layout.label(text=line, icon='ERROR')
@@ -168,7 +168,7 @@ class Operations(UIList):
             op_cost = f"Operation cost: ${total_cost:.2f} (${cost_per_second:.2f}/s)"
             layout.label(text=op_cost)
 
-    def draw_operation_properties(self, item: CamOperation, index, layout):
+    def draw_operation_properties(self, item: OperationProperties, index, layout):
         use_experimental = bpy.context.preferences.addons['cam'].preferences.experimental
 
         if item.valid:
@@ -318,7 +318,7 @@ class Operations(UIList):
                 layout.prop(item, 'array_y_count')
                 layout.prop(item, 'array_y_distance')
 
-    def draw_material(self, item: CamOperation, index, layout):
+    def draw_material(self, item: OperationProperties, index, layout):
         if item.geometry_source not in ['OBJECT', 'COLLECTION']:
             layout.label(text='Estimated from image')
             return
@@ -337,7 +337,7 @@ class Operations(UIList):
             layout.prop(item.material, 'z_position')
             layout.operator(PositionOperationObject.bl_idname, text="Position object").operationIndex = index
 
-    def draw_gcode(self, item: CamOperation, layout):
+    def draw_gcode(self, item: OperationProperties, layout):
         layout.prop(item, 'output_header')
 
         if item.output_header:
@@ -358,7 +358,7 @@ class Operations(UIList):
             layout.prop(item, 'gcode_start_mist_cmd')
             layout.prop(item, 'gcode_stop_mist_cmd')
 
-    def draw_optimization(self, item: CamOperation, layout):
+    def draw_optimization(self, item: OperationProperties, layout):
         layout.prop(item.optimisation, 'optimize')
         if item.optimisation.optimize:
             layout.prop(item.optimisation, 'optimize_threshold')
@@ -397,7 +397,7 @@ class Operations(UIList):
         layout.prop(item.optimisation, 'simulation_detail')
         layout.prop(item.optimisation, 'circle_detail')
 
-    def draw_area(self, item: CamOperation, layout):
+    def draw_area(self, item: OperationProperties, layout):
         layout.prop(item, 'use_layers')
         if item.use_layers:
             layout.prop(item, 'stepdown')
@@ -448,7 +448,7 @@ class Operations(UIList):
 
             layout.prop(item, "ambient_cutter_restrict")
 
-    def draw_movement(self, item: CamOperation, layout):
+    def draw_movement(self, item: OperationProperties, layout):
         if item.valid:
             layout.prop(item, 'movement_type')
 
@@ -494,7 +494,7 @@ class Operations(UIList):
             if item.protect_vertical:
                 layout.prop(item, 'protect_vertical_limit')
 
-    def draw_feedrate(self, item: CamOperation, layout):
+    def draw_feedrate(self, item: OperationProperties, layout):
         #layout = layout.row(align=True, heading="Feedrate") 
         layout.prop(item, 'feedrate')
         layout.prop(item, 'do_simulation_feedrate')
@@ -504,7 +504,7 @@ class Operations(UIList):
         layout.prop(item, 'plunge_angle')
         layout.prop(item, 'spindle_rpm')
 
-    def EngagementDisplay(self, operation: CamOperation, layout):
+    def EngagementDisplay(self, operation: OperationProperties, layout):
         if operation.cutter_type == 'BALLCONE':
             if operation.dist_between_paths > operation.ball_radius:
                 layout.label(text="CAUTION: CUTTER ENGAGEMENT")
@@ -516,7 +516,7 @@ class Operations(UIList):
                 layout.label(text="GREATER THAN 50%")
             layout.label(text="Cutter Engagement: " + str(round(100 * operation.dist_between_paths / operation.cutter_diameter, 1)) + "%")
 
-    def draw_operation_tool(self, item: CamOperation, index, layout):
+    def draw_operation_tool(self, item: OperationProperties, index, layout):
         row = layout.row(align=True)
         row.menu(ToolPresetsMenu.bl_idname, text=ToolPresetsMenu.bl_label)
 
@@ -576,7 +576,7 @@ class Operations(UIList):
             layout.prop(item, 'cutter_flutes')
         layout.prop(item, 'cutter_description')
 
-    def draw_operation_options(self, item: CamOperation, layout):
+    def draw_operation_options(self, item: OperationProperties, layout):
         if item.strategy != 'DRILL':
             layout.prop(item, 'remove_redundant_points')
 

@@ -15,7 +15,7 @@ from cam.strategy.utility import *
 from concurrent.futures import ThreadPoolExecutor
 from shapely import geometry as sgeometry
 
-from ..cutter.CutterManager import CutterManager
+from ..cutter.ToolManager import ToolManager
 
 def medialAxis(operation):
 
@@ -24,8 +24,8 @@ def medialAxis(operation):
 
     from cam.voronoi import computeVoronoiDiagram
     
-    if not CutterManager.isToolSupported(operation.cutter_type):
-        supportedTypes = CutterManager.getSupportedTools()
+    if not ToolManager.isToolSupported(operation.cutter_type):
+        supportedTypes = ToolManager.getSupportedTools()
         supportedTypes = [typeName.lower().capitalize() for typeName in supportedTypes]
         supportedTypes = ", ".join(supportedTypes)
 
@@ -112,7 +112,7 @@ def medialAxis(operation):
 
     printProgressionTitle("MARK POINTS AND CALCULATE DEPTH")
     # Prepare tool specific data
-    tool = CutterManager.constructToolFromOperation(operation)
+    tool = ToolManager.constructToolFromOperation(operation)
 
     multiPolygon = sgeometry.shape(polygons)
     polygonMarkedPoints = []

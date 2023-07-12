@@ -61,21 +61,21 @@ bl_info = {
     "category": "Scene"}
 
 classes = [
-    CamAddonPreferences,
-    OperationListExpansions,
+    AddonPreference,
+    OperationListExpansionsProperties,
     Operations,
     Chains,
-    OpReference,
-    CamChain,
-    MachineSettings,
-    ImportSettings,
+    OperationReferenceProperties,
+    ChainProperties,
+    MachineProperties,
+    ImportProperties,
     ExpandOperation,
     ChainsPanel,
     OperationsPanel,
-    CAMMaterialProperties,
+    MaterialProperties,
     PositionOperationObject,
-    CAMOptimizationProperties,
-    CAMInfoProperties,
+    OptimizationProperties,
+    InfoProperties,
     InfoPanel,
     MachinePanel,
     PackPanel,
@@ -83,9 +83,9 @@ classes = [
     CurveToolsPanel,
     CurveCreatorPanel,
     CustomPanel,
-    WM_OT_gcode_import,
-    PathsBackground,
-    KillPathsBackground,
+    ImportGCode,
+    CalculatePathsInBackground,
+    StopPathCalculationsInBackground,
     CalculateOperationPath,
     CalculateChainPaths,
     ExportChainPaths,
@@ -98,7 +98,7 @@ classes = [
     AddOperationToChain,
     RemoveOperationFromChain,
     MoveOperationInChain,
-	BasReliefsettings,
+	BasReliefProperties,
 	BasReliefPanel,
 	CalculateBasRelief,
 	ProblemAreas,
@@ -142,10 +142,10 @@ classes = [
     AddToolPreset,
     AddOperationPreset,
     AddMachinePreset,
-    BLENDERCAM_ENGINE,
-    PackObjectsSettings,
-    SliceObjectsSettings,
-    CamOperation,
+    BlenderCAMEngine,
+    PackObjectProperties,
+    SliceObjectProperties,
+    OperationProperties,
 ]
 
 def loadIcons():
@@ -170,27 +170,27 @@ def register():
 
     scene = bpy.types.Scene
 
-    scene.cam_operation_expansions = CollectionProperty(type=OperationListExpansions)
-    scene.cam_chains = CollectionProperty(type=CamChain)
+    scene.cam_operation_expansions = CollectionProperty(type=OperationListExpansionsProperties)
+    scene.cam_chains = CollectionProperty(type=ChainProperties)
     scene.cam_active_chain = IntProperty(name="CAM Active Chain", description="The selected chain")
 
-    scene.cam_operations = CollectionProperty(type=CamOperation)
+    scene.cam_operations = CollectionProperty(type=OperationProperties)
 
     scene.cam_active_operation = IntProperty(name="CAM Active Operation",
                                                 description="The selected operation",
                                                 update=updateOperation)
-    scene.cam_machine = PointerProperty(type=MachineSettings)
+    scene.cam_machine = PointerProperty(type=MachineProperties)
 
-    scene.cam_import_gcode = PointerProperty(type=ImportSettings)
+    scene.cam_import_gcode = PointerProperty(type=ImportProperties)
 
     scene.cam_text = StringProperty()
     bpy.app.handlers.frame_change_pre.append(ops.timer_update)
     bpy.app.handlers.load_post.append(check_operations_on_load)
 
-    scene.basreliefsettings = PointerProperty(type=BasReliefsettings)
-    scene.cam_pack = PointerProperty(type=PackObjectsSettings)
+    scene.basreliefsettings = PointerProperty(type=BasReliefProperties)
+    scene.cam_pack = PointerProperty(type=PackObjectProperties)
 
-    scene.cam_slice = PointerProperty(type=SliceObjectsSettings)
+    scene.cam_slice = PointerProperty(type=SliceObjectProperties)
 
     scene.thisIsATestValue = 0
 

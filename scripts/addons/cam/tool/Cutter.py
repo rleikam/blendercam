@@ -1,4 +1,6 @@
-class Cutter:
+from .Tool import Tool
+
+class Cutter(Tool):
     def __init__(self):
         pass
 

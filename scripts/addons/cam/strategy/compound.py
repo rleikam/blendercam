@@ -15,9 +15,9 @@ from cam.image_utils import *
 from cam.opencamlib.opencamlib import *
 
 from .utility import getLayers, chunksToMesh, sortChunks, getOperationSilhouete, connectChunksLow, getAmbient, chunksCoherency, sampleChunks, printProgressionTitle
-from ..blender.property.CamOperation import CamOperation
+from ..blender.property.OperationProperties import OperationProperties
 
-def carving(operation: CamOperation):
+def carving(operation: OperationProperties):
     printProgressionTitle("CARVE")
 
     object = bpy.data.objects[operation.curve_object]
@@ -47,7 +47,7 @@ def carving(operation: CamOperation):
 
     chunksToMesh(chunks, operation)
 
-def parallel(operation: CamOperation):
+def parallel(operation: OperationProperties):
     printProgressionTitle("PARALLEL")
 
     printProgressionTitle("CREATE PARALLEL PATTERN")
@@ -74,7 +74,7 @@ def parallel(operation: CamOperation):
     printProgressionTitle("CONVERT CHUNKS TO MESH")
     chunksToMesh(chunks, operation)
 
-def outlinefill(operation: CamOperation):
+def outlinefill(operation: OperationProperties):
     printProgressionTitle("OUTLINE")
 
     getOperationSilhouete(operation)
@@ -103,7 +103,7 @@ def outlinefill(operation: CamOperation):
 
     chunksToMesh(chunks, operation)
 
-def pencil(operation: CamOperation):
+def pencil(operation: OperationProperties):
     printProgressionTitle("PENCIL")
 
     prepareArea(operation)
@@ -164,7 +164,7 @@ def block(operation):
     printProgressionTitle("CONVERT CHUNKS TO MESH")
     chunksToMesh(chunks, operation)
 
-def spiral(operation: CamOperation):
+def spiral(operation: OperationProperties):
     pathSamples = getPathPattern(operation)
     pathSamples = connectChunksLow(pathSamples, operation)
 
@@ -185,7 +185,7 @@ def spiral(operation: CamOperation):
 
     chunksToMesh(chunks, operation)
 
-def cross(operation: CamOperation):
+def cross(operation: OperationProperties):
     pathSamples = getPathPattern(operation)
 
     layers = getLayers(operation, operation.maxz, operation.min.z)
@@ -208,7 +208,7 @@ def cross(operation: CamOperation):
 
     chunksToMesh(chunks, operation)
 
-def circles(operation: CamOperation):
+def circles(operation: OperationProperties):
     pathSamples = getPathPattern(operation)
     pathSamples = connectChunksLow(pathSamples, operation)
 
@@ -229,7 +229,7 @@ def circles(operation: CamOperation):
 
     chunksToMesh(chunks, operation)
 
-def crazy(operation: CamOperation):
+def crazy(operation: OperationProperties):
     prepareArea(operation)
 
     millarea = operation.zbuffer_image < operation.minz + 0.000001

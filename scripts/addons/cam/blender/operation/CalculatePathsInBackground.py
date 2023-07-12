@@ -6,7 +6,7 @@ import os
 import subprocess
 import threading
 
-class PathsBackground(Operator):
+class CalculatePathsInBackground(Operator):
     """calculate CAM paths in background. File has to be saved before."""
     bl_idname = "object.calculate_cam_paths_background"
     bl_label = "Calculate CAM paths in background"

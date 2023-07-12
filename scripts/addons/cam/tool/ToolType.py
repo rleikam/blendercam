@@ -1,6 +1,6 @@
 from enum import Enum
 
-class CutterType(Enum):
+class ToolType(Enum):
     CONE = "VCARVE"
     BALLNOSE = "BALLNOSE"
     BALLCONE = "BALLCONE"

@@ -5,7 +5,7 @@ from ...utils import *
 
 from ...constants import *
 
-class CAMMaterialProperties(PropertyGroup):
+class MaterialProperties(PropertyGroup):
 
     estimate_from_model: BoolProperty(
         name="Estimate cut area from model",

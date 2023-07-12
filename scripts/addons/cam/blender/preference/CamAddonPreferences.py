@@ -1,12 +1,12 @@
 from bpy.types import AddonPreferences
 from bpy.props import BoolProperty
 
-class CamAddonPreferences(AddonPreferences):
+class AddonPreference(AddonPreferences):
     bl_idname = "cam"
 
     experimental: BoolProperty(
-        name="Show experimental features",
-        default=False,
+        name = "Show experimental features",
+        default = False,
     )
 
     def draw(self, context):
