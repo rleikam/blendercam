@@ -109,7 +109,6 @@ def doSimulation(name, operations):
     image = bpy.data.images.load(imageName)
     createSimulationObject(name, operations, image)
 
-
 def generateSimulationImage(operations, limits):
     minx, miny, minz, maxx, maxy, maxz = limits
     # print(minx,miny,minz,maxx,maxy,maxz)

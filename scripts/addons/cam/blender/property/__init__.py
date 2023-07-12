@@ -11,3 +11,4 @@ from .OperationListExpansionsProperties import *
 from .OperationReferenceProperties import *
 from .PackObjectProperties import *
 from .SliceObjectProperties import *
+from .IntarsionProperties import * 

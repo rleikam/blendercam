@@ -75,6 +75,7 @@ classes = [
     MaterialProperties,
     PositionOperationObject,
     OptimizationProperties,
+    IntarsionProperties,
     InfoProperties,
     InfoPanel,
     MachinePanel,

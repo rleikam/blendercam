@@ -1,24 +1,25 @@
-import bpy
+from bpy.types import PropertyGroup
+from bpy.props import StringProperty, FloatProperty
 
 from ...constants import *
 from ...utils import *
 
-class InfoProperties(bpy.types.PropertyGroup):
+class InfoProperties(PropertyGroup):
     
-    warnings: bpy.props.StringProperty(
+    warnings: StringProperty(
         name='warnings',
         description='warnings',
         default='',
         update=update_operation
     )
 
-    chipload: bpy.props.FloatProperty(
+    chipload: FloatProperty(
         name="chipload", description="Calculated chipload",
         default=0.0, unit='LENGTH',
         precision=CHIPLOAD_PRECISION
     )
 
-    duration: bpy.props.FloatProperty(
+    duration: FloatProperty(
         name="Estimated time", default=0.01, min=0.0000,
         max=MAX_OPERATION_TIME,
         precision=PRECISION, unit="TIME"
