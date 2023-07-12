@@ -494,7 +494,7 @@ def exportGcodePath(filename, verticeList, operations):
             for aline in lines:
                 c.write(aline + '\n')
 
-    operation.info.duration = duration * unitcorr
+        operation.info.duration = duration * unitcorr
     if enable_dust:
         c.write(stop_dust + '\n')
     if enable_hold:

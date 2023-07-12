@@ -877,7 +877,6 @@ def chunksToShapely(chunks):
     polys = MultiPolygon(returnpolys)
     return polys
 
-
 def meshFromCurveToChunk(object):
     mesh = object.data
 
@@ -1018,11 +1017,8 @@ def shapelyToChunks(polygon, zlevel):
 
     return chunks
 
-
 def chunkToShapely(chunk):
-    p = spolygon.Polygon(chunk.points)
-    return p
-
+    return spolygon.Polygon(chunk.points)
 
 def chunksRefine(chunks, o):
     """add extra points in between for chunks"""
@@ -1067,25 +1063,25 @@ def chunksRefineThreshold(chunks, distance, limitdistance):
         v2 = Vector(chunk.points[0])
         for point in chunk.points:
             v1 = Vector(point)
-            v = v1 - v2
+            vector = v1 - v2
 
-            if v.length > limitdistance:
-                d = v.length
-                v.normalize()
+            if vector.length > limitdistance:
+                vectorDistance = vector.length
+                vector.normalize()
                 i = 1
                 vref = Vector((0, 0, 0))
-                while vref.length < d / 2:
+                while vref.length < vectorDistance / 2:
 
-                    vref = v * distance * i
-                    if vref.length < d:
+                    vref = vector * distance * i
+                    if vref.length < vectorDistance:
                         p = v2 + vref
 
                         newchunk.append((p.x, p.y, p.z))
                     i += 1
-                    vref = v * distance * i  # because of the condition, so it doesn't run again.
+                    vref = vector * distance * i  # because of the condition, so it doesn't run again.
                 while i > 0:
-                    vref = v * distance * i
-                    if vref.length < d:
+                    vref = vector * distance * i
+                    if vref.length < vectorDistance:
                         p = v1 - vref
 
                         newchunk.append((p.x, p.y, p.z))

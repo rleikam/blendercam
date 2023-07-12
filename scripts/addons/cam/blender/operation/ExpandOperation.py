@@ -10,12 +10,12 @@ class ExpandOperation(Operator):
     expansionName: StringProperty()
 
     def execute(self, context):
-        foundOperationExpansion = (
-            operationExpansion for operationExpansion in context.scene.cam_operation_expansions
-            if operationExpansion.operationName == self.operationName
+        foundOperations = (
+            operation for operation in context.scene.cam_operations
+            if operation.name == self.operationName
         )
 
-        operationExpansion = next(foundOperationExpansion)
-        operationExpansion.operationCollapsed = not operationExpansion.operationCollapsed
+        operation = next(foundOperations)
+        operation.expansion.operationCollapsed = not operation.expansion.operationCollapsed
 
         return {'FINISHED'}

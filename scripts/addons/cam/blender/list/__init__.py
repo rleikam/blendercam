@@ -1,3 +1,3 @@
-from .CAMULChains import *
-from .CAMULOperations import *
-from .CAMULOrientations import *
+from .Chains import *
+from .Operations import *
+from .Orientations import *

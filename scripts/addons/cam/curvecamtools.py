@@ -117,7 +117,7 @@ class CamCurveIntarsion(bpy.types.Operator):
         # along the diameter
         objectSilhouette = originalObjectSilhouette. \
             buffer(-self.diameter/2, resolution=16). \
-            buffer(self.diameter, resolution=16). \
+            buffer(self.diameter/2, resolution=16). \
             buffer(-self.diameter/2, resolution=16)
 
         profileObject = utils.shapelyToCurve(f"{currentObject.name}Profile", objectSilhouette, currentObject.location.z)
@@ -135,6 +135,48 @@ class CamCurveIntarsion(bpy.types.Operator):
             backlightObject = utils.shapelyToCurve(f"{currentObject.name}Backlight", backlightSilhouette, -self.backlight_depth_from_top - self.intarsion_thickness)
             utils.reassignObjectsToCollection([backlightObject], collectionFromObject)
 
+        return {'FINISHED'}
+
+# Smoothes the convex corners of a given object by using a given cutter diameter
+# Usefor for pocket clearing operations of areas and corners, that are not reachable by cutters, that are larger than the area allows
+class CurveToolPathSilhouette(bpy.types.Operator):
+    bl_idname = "object.curve_cutter_path_silhouette"
+    bl_label = "Tool Path Silhouette"
+    bl_description = "Creates the silhouette of the tool path with the given diameter. "\
+    "Optionally creating the pockets for clearing corners with a smaller tool"
+    bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+
+    diameter: FloatProperty(name="Cutter diameter", default=.001, min=0, max=0.025, precision=4,
+                                      unit="LENGTH")
+
+    generateClearingCornerPockets: BoolProperty(name="Generate ClearingPockets", default=False)
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and (context.active_object.type in ['CURVE', 'FONT'])
+
+    def execute(self, context):
+        simple.remove_multiple('smoothCorner_')
+
+        currentObject = context.active_object
+
+        collectionFromObject = currentObject.users_collection[0]
+
+        originalObjectSilhouette = utils.curveToShapely(currentObject)
+        originalObjectSilhouette = shapely.ops.unary_union(originalObjectSilhouette)
+
+        # Creates a dilation, erosion, contour on the original object silhouette to smoothe up the sharp corners along the diameter
+        smoothedObjectSilhouette = originalObjectSilhouette. \
+            buffer(-self.diameter/2, resolution=16). \
+            buffer(self.diameter/2, resolution=16) \
+
+        smoothedObjectSilhouetteObject = utils.shapelyToCurve(f"{currentObject.name}SmoothCorner", smoothedObjectSilhouette, currentObject.location.z)
+        utils.reassignObjectsToCollection([smoothedObjectSilhouetteObject], collectionFromObject)
+
+        if self.generateClearingCornerPockets:
+            cornerPocketSilhouette = originalObjectSilhouette.difference(smoothedObjectSilhouette)
+            cornerPocketSilhouetteObject = utils.shapelyToCurve(f"{currentObject.name}ClearingPocket", cornerPocketSilhouette, currentObject.location.z)
+            utils.reassignObjectsToCollection([cornerPocketSilhouetteObject], collectionFromObject)
 
         return {'FINISHED'}
 
@@ -605,19 +647,19 @@ class CamOffsetSilhouete(bpy.types.Operator):
                 context.active_object.type == 'CURVE' or context.active_object.type == 'FONT' or
                 context.active_object.type == 'MESH')
 
-    def execute(self, context):  # this is almost same as getobjectoutline, just without the need of operation data
+    def execute(self, context):
         bpy.ops.object.curve_remove_doubles()
-        ob = context.active_object
-        if self.opencurve and ob.type == 'CURVE':
-            bpy.ops.object.duplicate()
-            obj = context.active_object
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)  # apply all transforms
-            bpy.context.object.data.resolution_u = 60
+        object = context.active_object
+
+        if self.opencurve and object.type == 'CURVE':
+            newObject = object.copy()
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+            newObject.data.resolution_u = 60
             bpy.ops.object.convert(target='MESH')
             bpy.context.active_object.name = "temp_mesh"
 
             coords = []
-            for v in obj.data.vertices:  # extract X,Y coordinates from the vertices data
+            for v in newObject.data.vertices:  # extract X,Y coordinates from the vertices data
                 coords.append((v.co.x, v.co.y))
 
             simple.remove_multiple('temp_mesh')  # delete temporary mesh
@@ -630,9 +672,8 @@ class CamOffsetSilhouete(bpy.types.Operator):
                                   mitre_limit=self.mitrelimit)  # use shapely to expand
             polygon_utils_cam.shapelyToCurve("dilation", dilated, 0)
         else:
-            utils.silhoueteOffset(context, self.offset, int(self.style), self.mitrelimit)
+            utils.silhoueteOffset(object, self.offset, int(self.style), self.mitrelimit)
         return {'FINISHED'}
-
 
 # Finds object silhouette, usefull for meshes, since with curves it's not needed.
 class CamObjectSilhouete(bpy.types.Operator):

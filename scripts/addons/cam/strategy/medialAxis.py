@@ -1,7 +1,6 @@
 import bpy
 from bpy.props import *
 from math import *
-from bpy_extras import object_utils
 from cam.chunk import *
 from cam.collision import *
 from cam import simple
@@ -16,6 +15,8 @@ from cam.strategy.utility import *
 from concurrent.futures import ThreadPoolExecutor
 from shapely import geometry as sgeometry
 
+from ..cutter.CutterManager import CutterManager
+
 def medialAxis(operation):
 
     printProgressionTitle("OPERATION: MEDIAL AXIS")
@@ -23,8 +24,8 @@ def medialAxis(operation):
 
     from cam.voronoi import computeVoronoiDiagram
     
-    if not ToolManager.isToolSupported(operation.cutter_type):
-        supportedTypes = ToolManager.getSupportedTools()
+    if not CutterManager.isToolSupported(operation.cutter_type):
+        supportedTypes = CutterManager.getSupportedTools()
         supportedTypes = [typeName.lower().capitalize() for typeName in supportedTypes]
         supportedTypes = ", ".join(supportedTypes)
 
@@ -33,15 +34,22 @@ def medialAxis(operation):
 
     # remember resolutions of curves, to refine them,
     # otherwise medial axis computation yields too many branches in curved parts
-    originalObjectResolutions = [
-        (object, object.data.resolution_u)
-        for object in operation.objects
-        if object.type in ["CURVE", "FONT"]
-        if object.data.resolution_u < 64
-    ]
+    if operation.overwriteCurveResolution:
+        originalObjectResolutions = [
+            (object, object.data.resolution_u)
+            for object in operation.objects
+            if object.type in ["CURVE", "FONT"]
+        ]
 
-    for object, _ in originalObjectResolutions:
-        object.data.resolution_u = 64
+        if operation.temporaryCurveResolutionIsLowerThreshold:
+            originalObjectResolutions = [
+                objectResolution
+                for objectResolution in originalObjectResolutions
+                if objectResolution[0].data.resolution_u < operation.temporaryCurveResolution
+            ]
+
+        for object, _ in originalObjectResolutions:
+            object.data.resolution_u = operation.temporaryCurveResolution
     print()
 
     printProgressionTitle("REFINING POLYGONS")
@@ -104,7 +112,7 @@ def medialAxis(operation):
 
     printProgressionTitle("MARK POINTS AND CALCULATE DEPTH")
     # Prepare tool specific data
-    tool = ToolManager.constructToolFromOperation(operation)
+    tool = CutterManager.constructToolFromOperation(operation)
 
     multiPolygon = sgeometry.shape(polygons)
     polygonMarkedPoints = []
@@ -220,6 +228,10 @@ def medialAxis(operation):
 
     if operation.add_mesh_for_medial:
         simple.join_multiple("medialMesh")
+
+    if operation.overwriteCurveResolution:
+        for object, originalResolution in originalObjectResolutions:
+            object.data.resolution_u = originalResolution
 
     printProgressionTitle("GENERATE MESH")
     chunksToMesh(chunklayers, operation)

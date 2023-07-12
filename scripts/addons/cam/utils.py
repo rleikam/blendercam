@@ -522,14 +522,14 @@ def sampleChunks(operation, pathSamples, layers):
                         # there was a bug here, but should be fixed.
                         if currentlayer < lastlayer:
                             growing = True
-                            range = range(currentlayer, lastlayer)
+                            layerRange = range(currentlayer, lastlayer)
 
                         else:
-                            range = range(lastlayer, currentlayer)
+                            layerRange = range(lastlayer, currentlayer)
                             growing = False
 
                         li = 0
-                        for ls in range:
+                        for ls in layerRange:
                             splitz = layers[ls][1]
 
                             v1 = lastsample
@@ -827,6 +827,7 @@ def sampleChunksNAxis(operation, pathSamples, layers):
     return chunks
 
 def extendChunks5axis(chunks, operation):
+    scene = bpy.context.scene
     machine = scene.cam_machine
 
     if machine.use_position_definitions:
@@ -1182,9 +1183,7 @@ def getOperationSilhouete(operation):
         operation.update_silhouete_tag = False
     return operation.silhouete
 
-
 def getObjectSilhouete(stype, objects=None, use_modifiers=False):
-
     if stype == 'CURVES': 
         allchunks = []
         for object in objects:
@@ -1265,7 +1264,6 @@ def getObjectSilhouete(stype, objects=None, use_modifiers=False):
 
     return silhouete
 
-
 def getAmbient(operation):
     if operation.update_ambient_tag:
 
@@ -1297,25 +1295,19 @@ def getObjectOutline(radius, operation, offset):
     join = 2 if operation.straight else 1
     outlines = []
 
-    import time
-
     print("GET OPERATION SILHOUETTE")
-    time.sleep(5)
     polygons = getOperationSilhouete(operation)
 
     print("CHECK IF IS INSTANCE")
-    time.sleep(5)
     polygon_list = polygons if isinstance(polygons, list) else polygons.geoms
 
     print("SET POLYGONS")
-    time.sleep(5)
     for polygon in polygon_list:
         if radius > 0:
             polygon = polygon.buffer(radius * offset, resolution=operation.optimisation.circle_detail, join_style=join, mitre_limit=2)
         outlines.append(polygon)
 
     print("MERGE OR DON'T MERGE")
-    time.sleep(5)
     if operation.dont_merge:
         outline = sgeometry.MultiPolygon(outlines)
     else:
@@ -1360,6 +1352,12 @@ def addOrientationObject(o):
 def getCAMPathObjectNameConventionFrom(name):
     return f"CAMPath_{name}"
 
+def getCAMMachineObjectName():
+    return f"CAMMachine"
+
+def getCAMMaterialObjectName(name):
+    return f"CAMMaterial_{name}"
+
 def getCAMSimulationObjectNameConventionFrom(name):
     return f"CAMSimulation_{name}"
 
@@ -1368,7 +1366,6 @@ def removeOrientationObject(object):  # not working
     if bpy.context.scene.objects.find(name) > -1:
         ob = bpy.context.scene.objects[name]
         delob(ob)
-
 
 def addTranspMat(ob, mname, color, alpha):
     if mname in bpy.data.materials:
@@ -1387,8 +1384,9 @@ def addTranspMat(ob, mname, color, alpha):
 
 def addMachineAreaObject():
     scene = bpy.context.scene
-    if scene.objects.get('CAM_machine') is not None:
-        object = scene.objects['CAM_machine']
+    machineName = getCAMMachineObjectName()  
+    if scene.objects.get(machineName) is not None:
+        object = scene.objects[machineName]
     else:
         oldunits = scene.unit_settings.system
         oldLengthUnit = scene.unit_settings.length_unit
@@ -1397,8 +1395,8 @@ def addMachineAreaObject():
         scene.unit_settings.system = 'METRIC'
         bpy.ops.mesh.primitive_cube_add(align='WORLD', enter_editmode=False, location=(1, 1, -1), rotation=(0, 0, 0))
         object = bpy.context.active_object
-        object.name = 'CAM_machine'
-        object.data.name = 'CAM_machine'
+        object.name = machineName
+        object.data.name = machineName
         bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
 
         bpy.ops.object.editmode_toggle()
@@ -1489,14 +1487,15 @@ def addMaterialAreaObject():
     getOperationSources(operation)
     getBounds(operation)
 
+    materialObjectName = getCAMMaterialObjectName()
     activeObject = bpy.context.active_object
-    if scene.objects.get('CAM_material') is not None:
-        object = scene.objects['CAM_material']
+    if scene.objects.get(materialObjectName) is not None:
+        object = scene.objects[materialObjectName]
     else:
         bpy.ops.mesh.primitive_cube_add(align='WORLD', enter_editmode=False, location=(1, 1, -1), rotation=(0, 0, 0))
         object = bpy.context.active_object
-        object.name = 'CAM_material'
-        object.data.name = 'CAM_material'
+        object.name = materialObjectName
+        object.data.name = materialObjectName
         bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
 
         # addTranspMat(o, 'blue_transparent', (0.458695, 0.794658, 0.8), 0.1)
@@ -1565,39 +1564,38 @@ def unique(L):
 def checkEqual(lst):
     return lst[1:] == lst[:-1]
 
-
 def prepareIndexed(o):
-    s = bpy.context.scene
+    scene = bpy.context.scene
     # first store objects positions/rotations
     o.matrices = []
     o.parents = []
-    for ob in o.objects:
-        o.matrices.append(ob.matrix_world.copy())
-        o.parents.append(ob.parent)
+    for object in o.objects:
+        o.matrices.append(object.matrix_world.copy())
+        o.parents.append(object.parent)
 
     # then rotate them
-    for ob in o.objects:
-        ob.select = True
-    s.objects.active = ob
+    for object in o.objects:
+        object.select = True
+    scene.objects.active = object
     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
 
-    s.cursor.location = (0, 0, 0)
+    scene.cursor.location = (0, 0, 0)
     oriname = o.name + ' orientation'
-    ori = s.objects[oriname]
+    ori = scene.objects[oriname]
     o.orientation_matrix = ori.matrix_world.copy()
     o.rotationaxes = rotTo2axes(ori.rotation_euler, 'CA')
     ori.select = True
-    s.objects.active = ori
+    scene.objects.active = ori
     # we parent all objects to the orientation object
     bpy.ops.object.parent_set(type='OBJECT', keep_transform=True)
-    for ob in o.objects:
-        ob.select = False
+    for object in o.objects:
+        object.select = False
     # then we move the orientation object to 0,0
     bpy.ops.object.location_clear()
     bpy.ops.object.rotation_clear()
     ori.select = False
-    for ob in o.objects:
-        activate(ob)
+    for object in o.objects:
+        activate(object)
 
         bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
 

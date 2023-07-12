@@ -6,22 +6,12 @@ from math import *
 from bpy_extras import object_utils
 from cam.chunk import *
 from cam.collision import *
-from cam import simple
 from cam.simple import *
 from cam.pattern import *
-from cam import utils, bridges, ops
+from cam import utils
 from cam.utils import *
-from cam import polygon_utils_cam
 from cam.polygon_utils_cam import *
 from cam.image_utils import *
-from enum import Enum
-from typing import Iterator
-
-from concurrent.futures import ThreadPoolExecutor
-
-from shapely.geometry import polygon as spolygon
-from shapely import geometry as sgeometry
-from shapely import affinity
 
 SHAPELY = True
 
@@ -38,8 +28,8 @@ def Add_Pocket(sourceName, sourceType, depth, cutterDiameter):
             bpy.ops.object.delete()
 
     # Verify if medial pockets exist
-    for op in scene.cam_operations:
-        if op.name == "MedialPocket":
+    for operation in scene.cam_operations:
+        if operation.name == "MedialPocket":
             mpocket_exists = True
 
     pocketObjectName = f"{sourceName}_MedialPocket"
@@ -81,7 +71,6 @@ def Add_Pocket(sourceName, sourceType, depth, cutterDiameter):
         operation.material.size[2] = -depth
         operation.minz_from_ob = False
         operation.minz_from_material = True
-
 
 def getLayers(operation, startdepth, enddepth):
     """returns a list of layers bounded by startdepth and enddepth
@@ -267,118 +256,3 @@ def printProgressionTitle(title):
     print(dashLines)
     print(title)
     print(dashLines)
-
-class ToolType(Enum):
-    VCARVE = "VCARVE",
-    BALLNOSE = "BALLNOSE",
-    BALLCONE = "BALLCONE"
-
-class Tool:
-    def __init__(self):
-        pass
-
-    def calculateMillDepthFor(self, diameter: float) -> float:
-        """Calculates the mill depth for the given diameter based on the tip of the mill"""
-        pass
-
-    def calculateMillDiameterFor(self, depth: float) -> float:
-        """Calculates the mill diameter for the given depth based on the tip of the mill"""
-        pass
-    
-    def getMaximumToolLength(self) -> float:
-        """Get the maximum tool depth"""
-        pass
-
-class ToolManager:
-    """
-    Helper class for generating the calculation objects based on supported mill types
-    """
-    @staticmethod
-    def constructToolFromOperation(operation) -> Tool:
-        """Constructs a matching mill from the given operation"""
-
-        match(operation.cutter_type):
-            case ToolType.VCARVE.name:
-                return VCarveMill(operation.cutter_tip_angle, operation.cutter_diameter)
-            case ToolType.BALLNOSE.name:
-                return BallnoseMill(operation.cutter_diameter)
-            case ToolType.BALLCONE.name:
-                return BallconeMill(operation.cutter_tip_angle, operation.ball_radius*2, operation.cutter_diameter)
-                
-
-    @staticmethod
-    def isToolSupported(toolTypeName : str) -> str:
-        """Checks if the given tool type is supported"""
-        return toolTypeName in [enum.name for enum in ToolType]
-    
-    @staticmethod
-    def getSupportedTools() -> Iterator[str]:
-        """Gets the list of supported tools"""
-        return [enum.name for enum in ToolType]
-
-class VCarveMill(Tool):
-    def __init__(self, angle, diameter):
-        self._slope = math.tan(radians(angle / 2))
-        self._maximumToolDepth = (diameter/2)/self._slope
-
-    def calculateMillDepthFor(self, diameter: float) -> float:
-        return (diameter/2)/self._slope
-    
-    def calculateMillDiameterFor(self, depth: float) -> float:
-        return (depth*self._slope)*2
-
-    def getMaximumToolLength(self) -> float:
-        return self._maximumToolDepth
-    
-class BallconeMill(Tool):
-    def __init__(self, angle : float, ballDiameter : float, diameter : float):
-
-        self._slope = math.tan(radians(angle / 2))
-
-        self._ballRadius = ballDiameter/2
-
-        self._depthBallTangentToBallCenter = self._ballRadius * sin(radians(angle/2))
-        self._radiusBallTangent = self._ballRadius * cos(radians(angle/2))
-        self._depthConeTipToBallTangent = self._radiusBallTangent/self._slope
-        self._depthConeTipToBallCenter = self._depthConeTipToBallTangent + self._depthBallTangentToBallCenter
-        self._depthConeTipToBallTip = self._depthConeTipToBallCenter - self._ballRadius
-        self._depthBallTipToBallTangent = self._depthConeTipToBallCenter - self._depthConeTipToBallTip - self._depthBallTangentToBallCenter
-
-        self._maximumToolDepth = (diameter/2)/self._slope - self._depthConeTipToBallTip
-
-    def calculateMillDepthFor(self, diameter: float) -> float:
-        calculatedDepth = 0.0
-        millRadius = diameter/2
-        if millRadius < self._radiusBallTangent:
-            calculatedRadians = acos(millRadius/self._ballRadius)
-            calculatedDepth = self._ballRadius - self._ballRadius*sin(calculatedRadians)
-        else:
-            calculatedDepth = (millRadius/self._slope) - self._depthConeTipToBallTip
-        
-        return calculatedDepth
-    
-    def calculateMillDiameterFor(self, depth: float) -> float:
-        if depth < self._depthBallTipToBallTangent:
-            depthInverse = self._ballRadius - depth
-            calculatedRadians = asin(depthInverse/self._ballRadius)
-            calculatedDepth = 2*self._ballRadius*cos(calculatedRadians)
-        else:
-            calculatedDepth = 2*((depth+self._depthConeTipToBallTip)*self._slope)
-
-        return calculatedDepth
-
-    def getMaximumToolLength(self) -> float:
-        return self._maximumToolDepth
-
-class BallnoseMill(Tool):
-    def __init(self, diameter):
-        self.maximumToolDepth = diameter/2
-
-    def calculateMillDepthFor(self, diameter: float) -> float:
-        pass
-    
-    def calculateMillDiameterFor(self, depth: float) -> float:
-        pass
-
-    def getMaximumToolLength(self) -> float:
-        pass

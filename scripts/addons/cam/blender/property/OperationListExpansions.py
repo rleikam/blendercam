@@ -1,6 +1,5 @@
 from bpy.types import PropertyGroup
-from bpy.props import StringProperty, BoolProperty
+from bpy.props import BoolProperty
 
 class OperationListExpansions(PropertyGroup):
-    operationName: StringProperty()
-    operationCollapsed: BoolProperty()
+    operationCollapsed: BoolProperty(default=True)

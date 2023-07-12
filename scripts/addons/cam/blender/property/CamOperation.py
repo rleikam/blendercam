@@ -2,6 +2,7 @@ import bpy, math
 from ..property.CAMInfoProperties import CAMInfoProperties
 from ..property.CAMMaterialProperties import CAMMaterialProperties
 from ..property.CAMOptimizationProperties import CAMOptimizationProperties
+from ..property.OperationListExpansions import OperationListExpansions
 
 from bpy.props import BoolProperty, FloatProperty, StringProperty, IntProperty, EnumProperty, PointerProperty, FloatVectorProperty
 
@@ -15,15 +16,16 @@ import math
 from .callback import operationValid, updateBridges, updateChipload, \
     updateCutout, updateOffsetImage, updateOperationValid, \
     updateRest, updateStrategy, updateZbufferImage, \
-    getStrategyList
+    getStrategyList, updateOperationName
 
 class CamOperation(bpy.types.PropertyGroup):
     material: PointerProperty(type=CAMMaterialProperties)
     info: PointerProperty(type=CAMInfoProperties)
     optimisation: PointerProperty(type=CAMOptimizationProperties)
+    expansion: PointerProperty(type=OperationListExpansions)
 
-    name: StringProperty(name="Operation Name", default="Operation", update=updateRest)
-    filename: StringProperty(name="File name", default="Operation", update=updateRest)
+    name: StringProperty(name="Operation Name", default="Operation", update=updateOperationName)
+    filename: StringProperty(name="File name", default="Operation", subtype="FILE_PATH", update=updateRest)
     auto_export: BoolProperty(name="Auto export",
                                         description="export files immediately after path calculation", default=True)
     remove_redundant_points: BoolProperty(
@@ -74,17 +76,23 @@ class CamOperation(bpy.types.PropertyGroup):
                               description='Type of cutter used',
                               default='END', update=updateZbufferImage)
 
-    cutter_type: EnumProperty(name='Cutter',
-                              items=(
-                                  ('END', 'End', 'end - flat cutter'),
-                                  ('BALLNOSE', 'Ballnose', 'ballnose cutter'),
-                                  ('BULLNOSE', 'Bullnose', 'bullnose cutter ***placeholder **'),
-                                  ('VCARVE', 'V-carve', 'v carve cutter'),
-                                  ('BALLCONE', 'Ballcone', 'Ball with a Cone for Parallel - X'),
-                                  ('CYLCONE', 'Cylinder cone', 'Cylinder end with a Cone for Parallel - X'),
-                                  ('CUSTOM', 'Custom-EXPERIMENTAL', 'modelled cutter - not well tested yet.')),
-                              description='Type of cutter used',
-                              default='END', update=updateZbufferImage)
+    cutter_type: EnumProperty(
+        name='Cutter',
+        items=(
+            ('END', 'End', 'end - flat cutter'),
+            ('BALLNOSE', 'Ballnose', 'ballnose cutter'),
+            ('BULLNOSE', 'Bullnose', 'bullnose cutter ***placeholder **'),
+            ('VCARVE', 'V-carve', 'v carve cutter'),
+            ('BALLCONE', 'Ballcone', 'Ball with a Cone for Parallel - X'),
+            ('CYLCONE', 'Cylinder cone', 'Cylinder end with a Cone for Parallel - X'),
+            ('LASER', 'Laser', 'Laser cutter'),
+            ('PLASMA', 'Plasma', 'Plasma cutter'),
+            ('CUSTOM', 'Custom-EXPERIMENTAL', 'modelled cutter - not well tested yet.')
+        ),
+        description='Type of cutter used',
+        default='END',
+        update=updateZbufferImage)
+    
     cutter_object_name: StringProperty(name='Cutter object',
                                                  description='object used as custom cutter for this operation',
                                                  update=updateZbufferImage)
@@ -164,6 +172,13 @@ class CamOperation(bpy.types.PropertyGroup):
     pocketToCurve: BoolProperty(name="Pocket to curve",
                                           description="generates a curve instead of a path",
                                           default=False, update=updateRest)
+
+    ignoreRadiusCompensation: BoolProperty(
+        name="Inline cutting",
+        description="Cut additional on the silhouette",
+        default=False,
+        update=updateRest)
+
     # Cutout
     cut_type: EnumProperty(name='Cut',
                            items=(('OUTSIDE', 'Outside', 'a'), ('INSIDE', 'Inside', 'a'), ('ONLINE', 'On line', 'a')),
@@ -449,25 +464,57 @@ class CamOperation(bpy.types.PropertyGroup):
                                                 default=False,
                                                 update=updateRest)
     ####
-    medial_axis_threshold: FloatProperty(name="Long vector threshold", default=0.001, min=0.00000001,
-                                                   max=100, precision=PRECISION, unit="LENGTH", update=updateRest)
-    medial_axis_subdivision: FloatProperty(name="Fine subdivision", default=0.0002, min=0.00000001, max=100,
-                                                     precision=PRECISION, unit="LENGTH", update=updateRest)
-    # calculations
+    medial_axis_threshold: FloatProperty(
+        name="Long vector threshold",
+        default=0.001,
+        min=0.00000001,
+        max=100,
+        precision=PRECISION,
+        unit="LENGTH",
+        update=updateRest)
+    
+    medial_axis_subdivision: FloatProperty(
+        name="Fine subdivision",
+        default=0.0002,
+        min=0.00000001,
+        max=100,
+        precision=PRECISION,
+        unit="LENGTH",
+        update=updateRest)
+    
+    overwriteCurveResolution: BoolProperty(
+        name="Overwrite Curve Resolution",
+        description="Temporarily overwrites the curve resolution (computed points in U direction of curves) of the objects in the operation with the given value",
+        default=False,
+        update=updateRest)
+    
+    temporaryCurveResolutionIsLowerThreshold: BoolProperty(
+        name="Apply only to curves under the resolution",
+        description="Overwrite only for resolutions under the given value, so that curves with lower resolution are set to the given value and curves with higher resolution are unaffected",
+        default=False,
+        update=updateRest)
+    
+    temporaryCurveResolution: IntProperty(
+        name="Temporary Curve U-Resolution",
+        description="The temporary curve resolution that should be set",
+        default=12,
+        min=1,
+        max=128,
+        update=updateRest)
 
     # bridges
-    use_bridges: BoolProperty(name="Use bridges", description="use bridges in cutout", default=False,
+    use_bridges: BoolProperty(name="Use bridges", description="Use bridges in cutout", default=False,
                                         update=updateBridges)
-    bridges_width: FloatProperty(name='width of bridges', default=0.002, unit='LENGTH', precision=PRECISION,
+    bridges_width: FloatProperty(name='Width of bridges', default=0.002, unit='LENGTH', precision=PRECISION,
                                            update=updateBridges)
-    bridges_height: FloatProperty(name='height of bridges',
+    bridges_height: FloatProperty(name='Height of bridges',
                                             description="Height from the bottom of the cutting operation",
                                             default=0.0005, unit='LENGTH', precision=PRECISION, update=updateBridges)
     bridges_collection_name: StringProperty(name='Bridges Collection',
                                                       description='Collection of curves used as bridges',
                                                       update=operationValid)
-    use_bridge_modifiers: BoolProperty(name="use bridge modifiers",
-                                       description="include bridge curve modifiers using render level when calculating operation, does not effect original bridge data",
+    use_bridge_modifiers: BoolProperty(name="Use bridge modifiers",
+                                       description="Include bridge curve modifiers using render level when calculating operation, does not effect original bridge data",
                                        default=True, update=updateBridges)
 
     # commented this - auto bridges will be generated, but not as a setting of the operation

@@ -2,7 +2,6 @@ from cam import gcodeimportparser
 from bpy.types import Operator
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
-import bpy
 
 class WM_OT_gcode_import(Operator, ImportHelper):
     """Import Gcode, travel lines don't get drawn"""

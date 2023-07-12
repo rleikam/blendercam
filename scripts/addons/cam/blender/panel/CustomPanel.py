@@ -1,12 +1,12 @@
-from cam import bpy
 from bpy.types import Panel
+from ..operation.WM_OT_gcode_import import WM_OT_gcode_import
 
 class CustomPanel(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_context = "objectmode"
     bl_label = "Import Gcode"
-    bl_idname = "OBJECT_PT_importgcode"
+    bl_idname = "CAM_PT_custom"
 
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -34,4 +34,4 @@ class CustomPanel(Panel):
 
         col = layout.column()
         col.scale_y = 2.0
-        col.operator("wm.gcode_import")
+        col.operator(WM_OT_gcode_import.bl_idname)

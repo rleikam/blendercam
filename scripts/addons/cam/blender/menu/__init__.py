@@ -1,3 +1,3 @@
-from .CAMCutterMTPresets import *
-from .CAMMachineMTPresets import *
-from .CAMOperationMTPresets import *
+from .ToolPresetsMenu import *
+from .MachinePresetsMenu import *
+from .OperationPresetsMenu import *

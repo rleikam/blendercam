@@ -63,8 +63,6 @@ def updateStrategy(operation, context):
 
 def updateZbufferImage(self, context):
     """changes tags so offset and zbuffer images get updated on calculation time."""
-    # print('updatezbuf')
-    # print(self,context)
     self.changed = True
     self.update_zbufferimage_tag = True
     self.update_offsetimage_tag = True
@@ -166,6 +164,39 @@ def updateOperation(self, context):
     except Exception as e:
         print(e)
 
+def createUniqueOperationName(name: str):
+    newOperationName = name
+    nameCounter = 1
+    operationNames = [operation.name for operation in bpy.context.scene.cam_operations]
+    operationsWithSameName = [newOperationName == operationName for operationName in operationNames]
+
+    while any(operationsWithSameName):
+        newOperationName = f"{name}.{nameCounter}"
+        nameCounter += 1
+        operationNames = [operation.name for operation in bpy.context.scene.cam_operations]
+        operationsWithSameName = [newOperationName == operationName for operationName in operationNames]
+
+    return newOperationName
+
+def getOperationDuplicates():
+    duplicatedOperations = {}
+    for index, operation in enumerate(bpy.context.scene.cam_operations):
+        if operation.name not in duplicatedOperations:
+            duplicatedOperations[operation.name] = [index]
+        else:
+            duplicatedOperations[operation.name].append(index)
+
+    return duplicatedOperations
+
+def updateOperationName(self, context):
+    duplicatedNames = getOperationDuplicates()
+
+    if len(duplicatedNames[self.name]) > 1:
+        newOperationName = createUniqueOperationName(self.name)
+
+        self.name = newOperationName
+        self.changed = True
+
 def updateOperationValid(self, context):
     operationValid(self, context)
     updateOperation(self, context)
@@ -178,21 +209,27 @@ def updateMachine(self, context):
     print('update machine ')
     utils.addMachineAreaObject()
 
-@bpy.app.handlers.persistent
-def check_operations_on_load(context):
-    """checks any broken computations on load and reset them."""
+def resolveDuplicatedNameOperations():
+    duplicatedOperations = getOperationDuplicates()
+
+    for operationName, operationIndices in duplicatedOperations.items():
+        duplicateCount = len(operationIndices)
+        if duplicateCount > 1:
+
+            for index in operationIndices[1:]:
+                newOperationName = createUniqueOperationName(operationName)
+                bpy.context.scene.cam_operations[index].name = newOperationName
+
+def resetOperationComputationsState():
     scene = bpy.context.scene
     for operation in scene.cam_operations:
-
-        foundOperationExpansions = (expansion for expansion in scene.cam_operation_expansions if expansion.operationName == operation.name)
-        foundOperationExpansion = next(foundOperationExpansions, None)
-
-        if foundOperationExpansion == None:
-            newOperationExpansion = scene.cam_operation_expansions.add()
-            newOperationExpansion.operationName = operation.name
-
         if operation.computing:
             operation.computing = False
+
+@bpy.app.handlers.persistent
+def check_operations_on_load(context):
+    resolveDuplicatedNameOperations()
+    resetOperationComputationsState()
 
 # Update functions start here
 def getStrategyList(scene, context):

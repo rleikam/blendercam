@@ -39,10 +39,10 @@ from shapely import affinity, prepared
 def addBridge(x, y, rot, sizex, sizey):
     bpy.ops.mesh.primitive_plane_add(size=sizey*2, calc_uvs=True, enter_editmode=False, align='WORLD',
                                      location=(0, 0, 0), rotation=(0, 0, 0))
-    b = bpy.context.active_object
-    b.name = 'bridge'
+    bridgeObject = bpy.context.active_object
+    bridgeObject.name = 'bridge'
     # b.show_name=True
-    b.dimensions.x = sizex
+    bridgeObject.dimensions.x = sizex
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
     bpy.ops.object.editmode_toggle()
@@ -52,22 +52,22 @@ def addBridge(x, y, rot, sizex, sizey):
     bpy.ops.object.editmode_toggle()
     bpy.ops.object.convert(target='CURVE')
 
-    b.location = x, y, 0
-    b.rotation_euler.z = rot
-    return b
+    bridgeObject.location = x, y, 0
+    bridgeObject.rotation_euler.z = rot
+    return bridgeObject
 
 
-def addAutoBridges(o):
+def addAutoBridges(operation):
     """attempt to add auto bridges as set of curves"""
-    utils.getOperationSources(o)
-    bridgecollectionname = o.bridges_collection_name
+    utils.getOperationSources(operation)
+    bridgecollectionname = operation.bridges_collection_name
     if bridgecollectionname == '' or bpy.data.collections.get(bridgecollectionname) is None:
-        bridgecollectionname = 'bridges_' + o.name
+        bridgecollectionname = 'bridges_' + operation.name
         bpy.data.collections.new(bridgecollectionname)
         bpy.context.collection.children.link(bpy.data.collections[bridgecollectionname])
     g = bpy.data.collections[bridgecollectionname]
-    o.bridges_collection_name = bridgecollectionname
-    for ob in o.objects:
+    operation.bridges_collection_name = bridgecollectionname
+    for ob in operation.objects:
 
         if ob.type == 'CURVE' or ob.type == 'TEXT':
             curve = utils.curveToShapely(ob)
@@ -78,49 +78,49 @@ def addAutoBridges(o):
             minx, miny, maxx, maxy = c.bounds
             d1 = c.project(sgeometry.Point(maxx + 1000, (maxy + miny) / 2.0))
             p = c.interpolate(d1)
-            bo = addBridge(p.x, p.y, -math.pi / 2, o.bridges_width, o.cutter_diameter * 1)
+            bo = addBridge(p.x, p.y, -math.pi / 2, operation.bridges_width, operation.cutter_diameter * 1)
             g.objects.link(bo)
             bpy.context.collection.objects.unlink(bo)
             d1 = c.project(sgeometry.Point(minx - 1000, (maxy + miny) / 2.0))
             p = c.interpolate(d1)
-            bo = addBridge(p.x, p.y, math.pi / 2, o.bridges_width, o.cutter_diameter * 1)
+            bo = addBridge(p.x, p.y, math.pi / 2, operation.bridges_width, operation.cutter_diameter * 1)
             g.objects.link(bo)
             bpy.context.collection.objects.unlink(bo)
             d1 = c.project(sgeometry.Point((minx + maxx) / 2.0, maxy + 1000))
             p = c.interpolate(d1)
-            bo = addBridge(p.x, p.y, 0, o.bridges_width, o.cutter_diameter * 1)
+            bo = addBridge(p.x, p.y, 0, operation.bridges_width, operation.cutter_diameter * 1)
             g.objects.link(bo)
             bpy.context.collection.objects.unlink(bo)
             d1 = c.project(sgeometry.Point((minx + maxx) / 2.0, miny - 1000))
             p = c.interpolate(d1)
-            bo = addBridge(p.x, p.y, math.pi, o.bridges_width, o.cutter_diameter * 1)
+            bo = addBridge(p.x, p.y, math.pi, operation.bridges_width, operation.cutter_diameter * 1)
             g.objects.link(bo)
             bpy.context.collection.objects.unlink(bo)
 
 
-def getBridgesPoly(o):
-    if not hasattr(o, 'bridgespolyorig'):
-        bridgecollectionname = o.bridges_collection_name
+def getBridgesPoly(operation):
+    if not hasattr(operation, 'bridgespolyorig'):
+        bridgecollectionname = operation.bridges_collection_name
         bridgecollection = bpy.data.collections[bridgecollectionname]
         bpy.ops.object.select_all(action='DESELECT')
 
-        for ob in bridgecollection.objects:
-            if ob.type == 'CURVE':
-                ob.select_set(state=True)
-        bpy.context.view_layer.objects.active = ob
+        for object in bridgecollection.objects:
+            if object.type == 'CURVE':
+                object.select_set(state=True)
+        bpy.context.view_layer.objects.active = object
         bpy.ops.object.duplicate()
         bpy.ops.object.join()
-        ob = bpy.context.active_object
-        shapes = utils.curveToShapely(ob, o.use_bridge_modifiers)
-        ob.select_set(state=True)
+        object = bpy.context.active_object
+        shapes = utils.curveToShapely(object, operation.use_bridge_modifiers)
+        object.select_set(state=True)
         bpy.ops.object.delete(use_global=False)
         bridgespoly = sops.unary_union(shapes)
 
         # buffer the poly, so the bridges are not actually milled...
-        o.bridgespolyorig = bridgespoly.buffer(distance=o.cutter_diameter / 2.0)
-        o.bridgespoly_boundary = o.bridgespolyorig.boundary
-        o.bridgespoly_boundary_prep = prepared.prep(o.bridgespolyorig.boundary)
-        o.bridgespoly = prepared.prep(o.bridgespolyorig)
+        operation.bridgespolyorig = bridgespoly.buffer(distance=operation.cutter_diameter / 2.0)
+        operation.bridgespoly_boundary = operation.bridgespolyorig.boundary
+        operation.bridgespoly_boundary_prep = prepared.prep(operation.bridgespolyorig.boundary)
+        operation.bridgespoly = prepared.prep(operation.bridgespolyorig)
 
 
 def useBridges(ch, o):
@@ -167,7 +167,6 @@ def useBridges(ch, o):
                 l = sgeometry.LineString([chp1, chp2])
                 if o.bridgespoly_boundary_prep.intersects(l):
                     intersections = o.bridgespoly_boundary.intersection(l)
-
 
                 else:
                     intersections = sgeometry.GeometryCollection()

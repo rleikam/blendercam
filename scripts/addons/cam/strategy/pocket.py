@@ -1,6 +1,4 @@
-import bpy
 from bpy.props import *
-import time
 import math
 from math import *
 from bpy_extras import object_utils
@@ -9,27 +7,24 @@ from cam.collision import *
 from cam import simple
 from cam.simple import *
 from cam.pattern import *
-from cam import utils, bridges, ops
+from cam import utils
 from cam.utils import *
 from cam import polygon_utils_cam
 from cam.polygon_utils_cam import *
 from cam.image_utils import *
-from enum import Enum
-from typing import Iterator
 
 from cam.strategy.utility import *
 
-from concurrent.futures import ThreadPoolExecutor
+from ..blender.property.CamOperation import *
 
-from shapely.geometry import polygon as spolygon
 from shapely import geometry as sgeometry
 from shapely import affinity
 
-def pocket(operation):
+def pocket(operation: CamOperation):
     printProgressionTitle("OPERATION: POCKET")
 
     simple.remove_multiple("3D_poc")
-
+    
     maxDepth = checkminz(operation)
     cutterAngle = math.radians(operation.cutter_tip_angle / 2)
     cutterOffset = operation.cutter_diameter / 2
@@ -44,8 +39,10 @@ def pocket(operation):
 
     if cutterOffset > operation.cutter_diameter / 2:
         cutterOffset = operation.cutter_diameter / 2
+    
+    outlineOffset = 0 if operation.ignoreRadiusCompensation else cutterOffset
 
-    polygon = utils.getObjectOutline(cutterOffset, operation, False)
+    polygon = utils.getObjectOutline(outlineOffset, operation, False)
     approxn = (min(operation.max.x - operation.min.x, operation.max.y - operation.min.y) / operation.dist_between_paths) / 2
     print(f"Approximative: {approxn}")
 
