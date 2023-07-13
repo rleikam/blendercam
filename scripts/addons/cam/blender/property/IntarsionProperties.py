@@ -1,30 +1,37 @@
 from bpy.types import PropertyGroup
-from bpy.props import FloatProperty, EnumProperty
+from bpy.props import FloatProperty, EnumProperty, StringProperty
 
 from ...constants import *
 from ...utils import *
 from ...tool.ToolType import ToolType
 
 class IntarsionProperties(PropertyGroup):
+    # Object data
+    operationObjectName: StringProperty(
+        name = "Operation object",
+        description = "The object, the intarsion operation should be based from"
+    )
 
     # Cutter data
     carvingCutterType: EnumProperty(
         name = "Carving cutter type",
-        description = "The cutter that is used for carving along the pocket and the inlay contours." \
+        description = "The cutter that is used for carving along the pocket and the inlay contours. " \
             "Also used for clearing the corners of the inlay and the pocket",
         items = [
-            (ToolType.CONE, ToolType.CONE.value, "Simple cone type (V-CARVE) cutter"),
-            (ToolType.BALLCONE, ToolType.BALLCONE.value, "Cone type cutter with a ball end"),
-            (ToolType.BALLNOSE, ToolType.BALLNOSE.value, "Ball end mill"),
+            (ToolType.CONE.name, ToolType.CONE.value, "Simple cone type (V-CARVE) cutter"),
+            (ToolType.BALLCONE.name, ToolType.BALLCONE.value, "Cone type cutter with a ball end"),
+            (ToolType.BALLNOSE.name, ToolType.BALLNOSE.value, "Ball end mill"),
         ]
     )
 
     carvingCutterDiameter: FloatProperty(
-        name = "Carving cutter Diameter",
+        name = "Carving cutter diameter",
         description = "Diameter of the carving cutter",
         min = 0.000001,
         max = 10,
-        default = 0.003175
+        default = 0.003175,
+        unit="LENGTH",
+        precision=6
     )
 
     ballRadius: FloatProperty(
@@ -32,7 +39,9 @@ class IntarsionProperties(PropertyGroup):
         description = "Radius of the ball cutter",
         min = 0.000001,
         max = 10,
-        default = 0.00025
+        default = 0.00025,
+        unit="LENGTH",
+        precision=6
     )
 
     angle: FloatProperty(
@@ -41,7 +50,8 @@ class IntarsionProperties(PropertyGroup):
         subtype = "ANGLE",
         min=0.0,
         max=180.0,
-        default=10.0
+        default=10.0,
+        precision=6
     )
 
     clearingCutterDiameter: FloatProperty(
@@ -49,7 +59,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The diameter of the cutter for clearing the pockets and the inlays",
         min = 0.000001,
         max = 10,
-        default = 0.003175
+        default = 0.003175,
+        unit="LENGTH",
+        precision=6
     )
 
     clearingCutterDistanceBetweenToolPaths: FloatProperty(
@@ -57,7 +69,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The distance between toolpaths for the clearing cutter",
         min = 0.000001,
         max = 10,
-        default = 0.003175
+        default = 0.003175,
+        unit="LENGTH",
+        precision=6
     )
 
     cutoutCutterDiameter: FloatProperty(
@@ -65,7 +79,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The diameter of the cutter for cutting out the inlays along the silhouette of the inlay.",
         min = 0.000001,
         max = 10,
-        default = 0.003175
+        default = 0.003175,
+        unit="LENGTH",
+        precision=6
     )
 
     finishCutterDiameter: FloatProperty(
@@ -73,7 +89,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The diameter of the cutter for finishing and removing the excess base material of the inlay, that is sticking out of the base plate",
         min = 0.000001,
         max = 10,
-        default = 0.006
+        default = 0.006,
+        unit="LENGTH",
+        precision=6
     )
 
     finishCutterDistanceBetweenToolPaths: FloatProperty(
@@ -81,7 +99,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The distance between toolpaths for the finish cutter",
         min = 0.000001,
         max = 10,
-        default = 0.003175
+        default = 0.003175,
+        unit="LENGTH",
+        precision=6
     )
 
     # Cutting data
@@ -90,7 +110,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The maximum inlay and pocket depth for the intarsion",
         min = 0.000001,
         max = 10,
-        default = 0.005
+        default = 0.005,
+        unit="LENGTH",
+        precision=6
     )
 
     inlayCutoutOffset: FloatProperty(
@@ -98,5 +120,7 @@ class IntarsionProperties(PropertyGroup):
         description = "The silhouette offset of the inlay for cutting it out with the cutout cutter",
         min = 0.000001,
         max = 10,
-        default = 0.005
+        default = 0.005,
+        unit="LENGTH",
+        precision=6
     )

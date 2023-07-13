@@ -5,7 +5,7 @@ from bpy.types import Panel
 
 class InfoPanel(ButtonsPanel, Panel):
     """CAM info panel"""
-    bl_label = "CAM info & warnings"
+    bl_label = "Info & warnings"
     bl_idname = "CAM_PT_info"
 
     bl_options = {"HIDE_HEADER"}

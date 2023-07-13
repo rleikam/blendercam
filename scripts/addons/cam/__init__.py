@@ -78,6 +78,7 @@ classes = [
     IntarsionProperties,
     InfoProperties,
     InfoPanel,
+    IntarsionPanel,
     MachinePanel,
     PackPanel,
     SlicePanel,
@@ -193,7 +194,7 @@ def register():
 
     scene.cam_slice = PointerProperty(type=SliceObjectProperties)
 
-    scene.thisIsATestValue = 0
+    scene.intarsion = PointerProperty(type=IntarsionProperties)
 
 def unregister():
     for panels in classes:

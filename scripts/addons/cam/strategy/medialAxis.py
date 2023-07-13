@@ -15,7 +15,7 @@ from cam.strategy.utility import *
 from concurrent.futures import ThreadPoolExecutor
 from shapely import geometry as sgeometry
 
-from ..cutter.ToolManager import ToolManager
+from ..tool.ToolManager import ToolManager
 
 def medialAxis(operation):
 

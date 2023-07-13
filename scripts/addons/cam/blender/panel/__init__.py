@@ -9,3 +9,4 @@ from .CurveCreatorPanel import *
 from .SlicePanel import *
 from .CustomPanel import *
 from .CurveToolsPanel import *
+from .IntarsionPanel import *
