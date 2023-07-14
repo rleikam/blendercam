@@ -28,3 +28,4 @@ from .CalculatePathsInBackground import *
 from .CalculateChainPaths import *
 from .ProblemAreas import *
 from .ImportGCode import *
+from .AddIntarsionOperations import AddIntarsionOperations

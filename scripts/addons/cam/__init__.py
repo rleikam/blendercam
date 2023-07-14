@@ -105,6 +105,7 @@ classes = [
 	CalculateBasRelief,
 	ProblemAreas,
 
+    AddIntarsionOperations,
     AddOperation,
     CopyOperation,
     RemoveOperation,

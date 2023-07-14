@@ -4,6 +4,7 @@ from bpy.props import FloatProperty, EnumProperty, StringProperty
 from ...constants import *
 from ...utils import *
 from ...tool.ToolType import ToolType
+from math import radians
 
 class IntarsionProperties(PropertyGroup):
     # Object data
@@ -18,9 +19,9 @@ class IntarsionProperties(PropertyGroup):
         description = "The cutter that is used for carving along the pocket and the inlay contours. " \
             "Also used for clearing the corners of the inlay and the pocket",
         items = [
-            (ToolType.CONE.name, ToolType.CONE.value, "Simple cone type (V-CARVE) cutter"),
-            (ToolType.BALLCONE.name, ToolType.BALLCONE.value, "Cone type cutter with a ball end"),
-            (ToolType.BALLNOSE.name, ToolType.BALLNOSE.value, "Ball end mill"),
+            (ToolType.CONE.value, ToolType.CONE.value, "Simple cone type (V-CARVE) cutter"),
+            (ToolType.BALLCONE.value, ToolType.BALLCONE.value, "Cone type cutter with a ball end"),
+            (ToolType.BALLNOSE.value, ToolType.BALLNOSE.value, "Ball end mill"),
         ]
     )
 
@@ -30,6 +31,16 @@ class IntarsionProperties(PropertyGroup):
         min = 0.000001,
         max = 10,
         default = 0.003175,
+        unit="LENGTH",
+        precision=6
+    )
+
+    carvingCutterDistanceBetweenToolpaths: FloatProperty(
+        name = "Distance between toolpaths",
+        description = "Distance between toolpaths for corner clearing operations",
+        min = 0.000001,
+        max = 10,
+        default = 0.00025,
         unit="LENGTH",
         precision=6
     )
@@ -48,9 +59,9 @@ class IntarsionProperties(PropertyGroup):
         name = "Angle",
         description = "Angle of the carving cutter",
         subtype = "ANGLE",
-        min=0.0,
-        max=180.0,
-        default=10.0,
+        min = 0.0,
+        max = radians(180),
+        default = radians(10.0),
         precision=6
     )
 
@@ -111,6 +122,16 @@ class IntarsionProperties(PropertyGroup):
         min = 0.000001,
         max = 10,
         default = 0.005,
+        unit="LENGTH",
+        precision=6
+    )
+
+    inlayMaterialDepth: FloatProperty(
+        name = "Inlay material depth",
+        description = "The material depth for the inlay. Used for the cutout depth of the inlay.",
+        min = 0.000001,
+        max = 10,
+        default = 0.01,
         unit="LENGTH",
         precision=6
     )

@@ -1,5 +1,6 @@
 import bpy
 from bpy.types import Panel
+from ..operation import AddIntarsionOperations
 
 from .ButtonsPanel import ButtonsPanel
 from ..property.IntarsionProperties import IntarsionProperties
@@ -20,6 +21,7 @@ class IntarsionPanel(ButtonsPanel, Panel):
         operationObjectBox = layout.box()
         operationObjectBox.label(text="Operation object")
         operationObjectBox.prop_search(intarsionProperties, "operationObjectName", bpy.data, "objects", text="")
+        operationObjectBox.prop(intarsionProperties, "pocketDepth")
 
         carvingCutterBox = layout.box()
         carvingCutterBox.label(text="Carving cutter")
@@ -37,20 +39,19 @@ class IntarsionPanel(ButtonsPanel, Panel):
                 carvingCutterBox.prop(intarsionProperties, "ballRadius")
 
         clearingCutterBox = layout.box()
-        clearingCutterBox.label(text="Clearing cutter")
+        clearingCutterBox.label(text="Clearing")
         clearingCutterBox.prop(intarsionProperties, "clearingCutterDiameter")
         clearingCutterBox.prop(intarsionProperties, "clearingCutterDistanceBetweenToolPaths")
 
         cutoutCutterBox = layout.box()
-        cutoutCutterBox.label(text="Cutout cutter")
+        cutoutCutterBox.label(text="Inlay Cutout")
         cutoutCutterBox.prop(intarsionProperties, "clearingCutterDiameter")
+        cutoutCutterBox.prop(intarsionProperties, "inlayCutoutOffset")
+        cutoutCutterBox.prop(intarsionProperties, "inlayMaterialDepth")
 
         finishCutterBox = layout.box()
-        finishCutterBox.label(text="Finish cutter")
+        finishCutterBox.label(text="Finish")
         finishCutterBox.prop(intarsionProperties, "finishCutterDiameter")
         finishCutterBox.prop(intarsionProperties, "finishCutterDistanceBetweenToolPaths")
 
-        operationDataBox = layout.box()
-        operationDataBox.label(text="Operation data")
-        operationDataBox.prop(intarsionProperties, "pocketDepth")
-        operationDataBox.prop(intarsionProperties, "inlayCutoutOffset")
+        layout.operator(AddIntarsionOperations.bl_idname)
