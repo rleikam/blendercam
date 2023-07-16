@@ -500,7 +500,6 @@ class CamCurveOvercutsB(bpy.types.Operator):
         utils.shapelyToCurve(o1.name + '_overcuts', fs, o1.location.z)
         return {'FINISHED'}
 
-
 class CamCurveRemoveDoubles(bpy.types.Operator):
     """curve remove doubles - warning, removes beziers!"""
     bl_idname = "object.curve_remove_doubles"
@@ -532,6 +531,39 @@ class CamCurveRemoveDoubles(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class CamMapObjectToTarget(bpy.types.Operator):
+    bl_idname = "object.map_object_to_target"
+    bl_label = "Map objects to target"
+    bl_description = "Maps the selected objects underneath the active object of the selection."
+    bl_options = {'REGISTER', 'UNDO'}
+
+    objectOffset: FloatProperty(
+        name = "Object offset",
+        description = "The offset that should be applied.",
+        precision = 6,
+        unit = "LENGTH",
+        )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and (context.active_object.type == 'MESH')
+    
+    def execute(self, context):
+        selectedObjects = bpy.context.selected_objects
+
+        selectedObjectsCount = len(selectedObjects)
+        if selectedObjectsCount < 2:
+            print("At least 2 objects must be selected, when using object placing.")
+
+        targetObject = bpy.context.active_object
+        objectsToPlace = filter(
+            lambda object:
+                object.name != targetObject.name,
+                selectedObjects)
+
+        utils.placeObjectsUnder(objectsToPlace, targetObject, self.objectOffset)
+            
+        return {"FINISHED"}
 
 class CamMeshGetPockets(bpy.types.Operator):
     """Detect pockets in a mesh and extract them as curves"""

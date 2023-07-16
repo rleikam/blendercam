@@ -454,18 +454,24 @@ class OperationProperties(bpy.types.PropertyGroup):
     crazy_threshold4: FloatProperty(name="test angle step", default=0.05, min=0.00000001, max=100,
                                               precision=PRECISION, update=updateRest)
     # Add pocket operation to medial axis
-    add_pocket_for_medial: BoolProperty(name="Add pocket operation",
-                                                  description="clean unremoved material after medial axis",
-                                                  default=True,
-                                                  update=updateRest)
+    add_pocket_for_medial: BoolProperty(
+        name="Add pocket operation",
+        description="Adds a pocket operation for the areas, that are not reachable by the medial axis operation." \
+            "The pocket operation can be used to remove these areas.",
+        default=True,
+        update=updateRest
+    )
 
-    add_mesh_for_medial: BoolProperty(name="Add Medial mesh",
-                                                description="Medial operation returns mesh for editing and further processing",
-                                                default=False,
-                                                update=updateRest)
-    ####
+    add_mesh_for_medial: BoolProperty(
+        name="Add Medial mesh",
+        description="Medial operation returns mesh for editing and further processing",
+        default=False,
+        update=updateRest
+    )
+
     medial_axis_threshold: FloatProperty(
-        name="Long vector threshold",
+        name="Line subdivision threshold",
+        description = "The line length threshold, when subdividing should apply. Line lengths greater than this value, are getting subdivided",
         default=0.001,
         min=0.00000001,
         max=100,
@@ -474,7 +480,8 @@ class OperationProperties(bpy.types.PropertyGroup):
         update=updateRest)
     
     medial_axis_subdivision: FloatProperty(
-        name="Fine subdivision",
+        name="Line subdivision length",
+        description = "When the condition for line subdivision threshold matches for a line, it is subdivided into smaller lines with the length matching this value",
         default=0.0002,
         min=0.00000001,
         max=100,
@@ -489,8 +496,8 @@ class OperationProperties(bpy.types.PropertyGroup):
         update=updateRest)
     
     temporaryCurveResolutionIsLowerThreshold: BoolProperty(
-        name="Apply only to curves under the resolution",
-        description="Overwrite only for resolutions under the given value, so that curves with lower resolution are set to the given value and curves with higher resolution are unaffected",
+        name="Apply only to curves below the resolution",
+        description="Overwrite only for resolution value under the given value, so that curves with lower resolution are set to the given value and curves with higher resolution are unaffected",
         default=False,
         update=updateRest)
     
@@ -530,16 +537,12 @@ class OperationProperties(bpy.types.PropertyGroup):
     # bridges_per_curve = IntProperty(name="minimum bridges per curve", description="", default=4, min=1, max=512, update = updateBridges)
     # bridges_max_distance = FloatProperty(name = 'Maximum distance between bridges', default=0.08, unit='LENGTH', precision=cam.constants.PRECISION, update = updateBridges)
 
-    use_modifiers: BoolProperty(name="use mesh modifiers",
-                                description="include mesh modifiers using render level when calculating operation, does not effect original mesh",
+    use_modifiers: BoolProperty(name="Use mesh modifiers",
+                                description="Include mesh modifiers using render level when calculating operation, does not effect original mesh",
                                 default=True, update=operationValid)
     # optimisation panel
 
     # material settings
-
-
-
-
 
 
 ##############################################################################
@@ -550,7 +553,6 @@ class OperationProperties(bpy.types.PropertyGroup):
                                        subtype="XYZ")
     max: FloatVectorProperty(name='Operation maximum', default=(0, 0, 0), unit='LENGTH', precision=PRECISION,
                                        subtype="XYZ")
-
 
     # g-code options for operation
     output_header: BoolProperty(name="output g-code header",

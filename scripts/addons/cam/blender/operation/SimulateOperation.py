@@ -1,6 +1,6 @@
 from cam import simulation, utils
 from bpy.types import Operator
-from bpy.props import StringProperty
+from bpy.props import IntProperty
 import bpy
 
 class SimulateOperation(Operator):
@@ -11,17 +11,16 @@ class SimulateOperation(Operator):
     bl_label = "CAM simulation"
     bl_options = {'REGISTER', 'UNDO'}
 
-    operation: StringProperty(name="Operation",
-                              description="Specify the operation to calculate", default='Operation')
+    operationIndex: IntProperty()
 
     def execute(self, context):
         scene = context.scene
-        operation = scene.cam_operations[scene.cam_active_operation]
+        operation = scene.cam_operations[self.operationIndex]
 
-        operationName = utils.getCAMPathObjectNameConventionFrom(operation.name)
+        operationPathObjectName = utils.getCAMPathObjectNameConventionFrom(operation.name)
 
-        if operationName in bpy.data.objects:
-            simulation.doSimulation(operationName, [operation])
+        if operationPathObjectName in bpy.data.objects:
+            simulation.doSimulation(operationPathObjectName, [operation])
         else:
             print('no computed path to simulate')
             return {'FINISHED'}

@@ -4,7 +4,7 @@ from bpy.types import Panel
 from ..operation.AddOperationPreset import AddOperationPreset
 
 from .ButtonsPanel import ButtonsPanel
-from ..list.Operations import Operations
+from ..list.OperationList import OperationList
 
 from ..operation.AddOperation import AddOperation
 
@@ -29,7 +29,7 @@ class OperationsPanel(ButtonsPanel, Panel):
         column = self.layout.column(align=True)
 
         column.operator(AddOperation.bl_idname, icon='ADD', text="Add operation")
-        column.template_list(Operations.bl_idname, '', bpy.context.scene, "cam_operations", bpy.context.scene, 'cam_active_operation')
+        column.template_list(OperationList.bl_idname, '', bpy.context.scene, "cam_operations", bpy.context.scene, 'cam_active_operation')
 
     # Draw the list of preset operations, and preset add and remove buttons
     def draw_presets(self):

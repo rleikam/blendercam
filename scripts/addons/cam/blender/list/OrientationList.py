@@ -1,6 +1,6 @@
 from bpy.types import UIList
 
-class Orientations(UIList):
+class OrientationList(UIList):
     bl_idname = "CAM_UL_orientations"
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):

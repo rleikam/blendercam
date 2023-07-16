@@ -1,5 +1,6 @@
 from cam import gcodepath, utils
 from bpy.types import Operator
+from bpy.props import IntProperty
 import bpy
 
 class ExportOperationPath(Operator):
@@ -8,9 +9,11 @@ class ExportOperationPath(Operator):
     bl_label = "Export operation gcode"
     bl_options = {'REGISTER', 'UNDO'}
 
+    operationIndex: IntProperty()
+
     def execute(self, context):
         scene = bpy.context.scene
-        operation = scene.cam_operations[scene.cam_active_operation]
+        operation = scene.cam_operations[self.operationIndex]
 
         camPathName = utils.getCAMPathObjectNameConventionFrom(operation.name)
         print("EXPORTING", operation.filename, bpy.data.objects[camPathName].data, operation)

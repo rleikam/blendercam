@@ -19,7 +19,7 @@ from ...simple import strInUnits
 from bpy.types import UIList
 import bpy
 
-class Operations(UIList):
+class OperationList(UIList):
     bl_idname = "CAM_UL_operations"
 
     def draw_item(self, context, layout, data, item: OperationProperties, icon, active_data, active_propname, index):
@@ -61,11 +61,12 @@ class Operations(UIList):
         else:
             buttonRow.operator(CalculateOperationPath.bl_idname, text="", icon_value=millIconId, emboss=False).operationIndex = index
 
-            buttonRow.operator(SimulateOperation.bl_idname, icon_value=millPathSimulationId, text="", emboss=False)
+            buttonRow.operator(SimulateOperation.bl_idname, icon_value=millPathSimulationId, text="", emboss=False).operationIndex = index
+
             name = utils.getCAMPathObjectNameConventionFrom(item.name)
             if bpy.context.scene.objects.get(name) is not None:
                 exportPathId = context.scene.previewCollection["exportGCode"].icon_id
-                buttonRow.operator(ExportOperationPath.bl_idname, icon_value=exportPathId, text="", emboss=False)
+                buttonRow.operator(ExportOperationPath.bl_idname, icon_value=exportPathId, text="", emboss=False).operationIndex = index
 
         scene = context.scene
         if len(scene.cam_chains) > 0:

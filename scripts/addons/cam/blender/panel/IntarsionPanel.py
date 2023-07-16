@@ -13,45 +13,44 @@ class IntarsionPanel(ButtonsPanel, Panel):
     COMPAT_ENGINES = {'BLENDERCAM_RENDER'}
 
     def draw(self, context):
-
         intarsionProperties: IntarsionProperties = context.scene.intarsion
 
         layout = self.layout
 
-        operationObjectBox = layout.box()
-        operationObjectBox.label(text="Operation object")
-        operationObjectBox.prop_search(intarsionProperties, "operationObjectName", bpy.data, "objects", text="")
-        operationObjectBox.prop(intarsionProperties, "pocketDepth")
+        operationObjectColumn = layout.column(align=True)
+        operationObjectColumn.label(text="Operation object")
+        operationObjectColumn.prop_search(intarsionProperties, "operationObjectName", bpy.data, "objects", text="")
+        operationObjectColumn.prop(intarsionProperties, "pocketDepth")
 
-        carvingCutterBox = layout.box()
-        carvingCutterBox.label(text="Carving cutter")
-        carvingCutterBox.prop(intarsionProperties, "carvingCutterType")
+        carvingCutterColumn = layout.column(align=True)
+        carvingCutterColumn.label(text="Carving cutter")
+        carvingCutterColumn.prop(intarsionProperties, "carvingCutterType")
 
         match intarsionProperties.carvingCutterType:
-            case ToolType.CONE.name:
-                carvingCutterBox.prop(intarsionProperties, "carvingCutterDiameter")
-                carvingCutterBox.prop(intarsionProperties, "angle")
-            case ToolType.BALLCONE.name:
-                carvingCutterBox.prop(intarsionProperties, "carvingCutterDiameter")
-                carvingCutterBox.prop(intarsionProperties, "ballRadius")
-                carvingCutterBox.prop(intarsionProperties, "angle")
-            case ToolType.BALLNOSE.name:
-                carvingCutterBox.prop(intarsionProperties, "ballRadius")
+            case ToolType.CONE.value:
+                carvingCutterColumn.prop(intarsionProperties, "carvingCutterDiameter")
+                carvingCutterColumn.prop(intarsionProperties, "angle")
+            case ToolType.BALLCONE.value:
+                carvingCutterColumn.prop(intarsionProperties, "carvingCutterDiameter")
+                carvingCutterColumn.prop(intarsionProperties, "ballRadius")
+                carvingCutterColumn.prop(intarsionProperties, "angle")
+            case ToolType.BALLNOSE.value:
+                carvingCutterColumn.prop(intarsionProperties, "ballRadius")
 
-        clearingCutterBox = layout.box()
-        clearingCutterBox.label(text="Clearing")
-        clearingCutterBox.prop(intarsionProperties, "clearingCutterDiameter")
-        clearingCutterBox.prop(intarsionProperties, "clearingCutterDistanceBetweenToolPaths")
+        clearingCutterColumn = layout.column(align=True)
+        clearingCutterColumn.label(text="Clearing")
+        clearingCutterColumn.prop(intarsionProperties, "clearingCutterDiameter")
+        clearingCutterColumn.prop(intarsionProperties, "clearingCutterDistanceBetweenToolPaths")
 
-        cutoutCutterBox = layout.box()
-        cutoutCutterBox.label(text="Inlay Cutout")
-        cutoutCutterBox.prop(intarsionProperties, "clearingCutterDiameter")
-        cutoutCutterBox.prop(intarsionProperties, "inlayCutoutOffset")
-        cutoutCutterBox.prop(intarsionProperties, "inlayMaterialDepth")
+        cutoutCutterColumn = layout.column(align=True)
+        cutoutCutterColumn.label(text="Inlay Cutout")
+        cutoutCutterColumn.prop(intarsionProperties, "clearingCutterDiameter")
+        cutoutCutterColumn.prop(intarsionProperties, "inlayCutoutOffset")
+        cutoutCutterColumn.prop(intarsionProperties, "inlayMaterialDepth")
 
-        finishCutterBox = layout.box()
-        finishCutterBox.label(text="Finish")
-        finishCutterBox.prop(intarsionProperties, "finishCutterDiameter")
-        finishCutterBox.prop(intarsionProperties, "finishCutterDistanceBetweenToolPaths")
+        finishCutterColumn = layout.column(align=True)
+        finishCutterColumn.label(text="Finish")
+        finishCutterColumn.prop(intarsionProperties, "finishCutterDiameter")
+        finishCutterColumn.prop(intarsionProperties, "finishCutterDistanceBetweenToolPaths")
 
         layout.operator(AddIntarsionOperations.bl_idname)

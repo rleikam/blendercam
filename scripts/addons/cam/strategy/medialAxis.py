@@ -15,9 +15,11 @@ from cam.strategy.utility import *
 from concurrent.futures import ThreadPoolExecutor
 from shapely import geometry as sgeometry
 
+from ..blender.property.OperationProperties import OperationProperties
+
 from ..tool.ToolManager import ToolManager
 
-def medialAxis(operation):
+def medialAxis(operation: OperationProperties):
 
     printProgressionTitle("OPERATION: MEDIAL AXIS")
     simple.remove_multiple("medialMesh")
@@ -190,15 +192,16 @@ def medialAxis(operation):
     operationDepth = abs(operation.minz)
     maximumToolDepth = tool.getMaximumToolLength()
     allowedToolDepth = operationDepth if maximumToolDepth > operationDepth else maximumToolDepth
-    chunks = []
+    chunks : list[camPathChunk] = []
     for polygonIndex, (polygon, lines) in enumerate(zip(polygons.geoms, polygonLines)):
         bufferDistance = -tool.calculateMillDiameterFor(allowedToolDepth)/2
         bufferPolygon = polygon.buffer(bufferDistance, resolution=64)
         startDepthOfPolygon = polygon.exterior.coords[0][2]
-        
+
+        maxEndDepth = startDepthOfPolygon - allowedToolDepth
         if bufferPolygon.geom_type in ["Polygon", "MultiPolygon"]:
             lines = lines.difference(bufferPolygon)
-            chunks.extend(shapelyToChunks(bufferPolygon, -allowedToolDepth + startDepthOfPolygon))
+            chunks.extend(shapelyToChunks(bufferPolygon, maxEndDepth))
         chunks.extend(shapelyToChunks(lines, 0))
 
         if operation.add_mesh_for_medial:
@@ -206,25 +209,24 @@ def medialAxis(operation):
             bpy.ops.object.convert(target='MESH')
     
     print()
-
     printProgressionTitle("SORTING CHUNKS")
     chunks = utils.sortChunks(chunks, operation)
-
+    chunkLayers = chunks
     print()
 
-    printProgressionTitle("SETTING LAYERS")
-    layers = getLayers(operation, operation.maxz, operation.min.z)
-    chunklayers = []
-
-    for layer in layers:
-        for chunk in chunks:
-            if chunk.isbelowZ(layer[0]):
-                newchunk = chunk.copy()
-                newchunk.clampZ(layer[1])
-                chunklayers.append(newchunk)
+    printProgressionTitle("SET LAYERS")
+    if operation.use_layers:
+        layers = getLayers(operation, operation.maxz, operation.min.z)
+        chunkLayers = []
+        for layer in layers:
+            for chunk in chunks:
+                if chunk.isbelowZ(layer[0]):
+                    newChunk = chunk.copy()
+                    newChunk.clampZ(layer[1])
+                    chunkLayers.append(newChunk)
 
     if operation.first_down:
-        chunklayers = utils.sortChunks(chunklayers, operation)
+        chunkLayers = utils.sortChunks(chunkLayers, operation)
 
     if operation.add_mesh_for_medial:
         simple.join_multiple("medialMesh")
@@ -234,7 +236,7 @@ def medialAxis(operation):
             object.data.resolution_u = originalResolution
 
     printProgressionTitle("GENERATE MESH")
-    chunksToMesh(chunklayers, operation)
+    chunksToMesh(chunkLayers, operation)
 
     printProgressionTitle("ADD POCKET")
     if operation.add_pocket_for_medial:

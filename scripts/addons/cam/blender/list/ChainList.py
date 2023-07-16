@@ -7,7 +7,7 @@ from ..operation.RemoveOperationFromChain import RemoveOperationFromChain
 
 from bpy.types import UIList
 
-class Chains(UIList):
+class ChainList(UIList):
     bl_idname = "CAM_UL_chains"
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -28,8 +28,8 @@ class Chains(UIList):
 
                 millPathSimulationId = context.scene.previewCollection["millSimulation"].icon_id
                 exportPathId = context.scene.previewCollection["exportGCode"].icon_id
-                chainRow.operator(SimulateChain.bl_idname, text="", icon_value=millPathSimulationId, emboss=False)
-                chainRow.operator(ExportChainPaths.bl_idname, text="", icon_value=exportPathId, emboss=False)
+                chainRow.operator(SimulateChain.bl_idname, text="", icon_value=millPathSimulationId, emboss=False).chainIndex = index
+                chainRow.operator(ExportChainPaths.bl_idname, text="", icon_value=exportPathId, emboss=False).chainIndex = index
             else:
                 chainRow.label(text="chain invalid, can't compute")
 

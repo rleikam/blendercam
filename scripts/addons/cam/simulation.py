@@ -286,58 +286,74 @@ def generateSimulationImage(operations, limits):
     return si
 
 
-def getCutterArray(operation, pixsize):
-    type = operation.cutter_type
-    # print('generating cutter')
-    r = operation.cutter_diameter / 2 + operation.skin  # /operation.pixsize
-    res = math.ceil((r * 2) / pixsize)
-    m = res / 2.0
-    car = np.array((0), dtype=float)
-    car.resize(res, res)
-    car.fill(-10)
+def getCutterArray(operation, pixelSize):
+    cutterType = operation.cutter_type
 
-    v = mathutils.Vector((0, 0, 0))
-    ps = pixsize
-    if type == 'END':
-        for a in range(0, res):
-            v.x = (a + 0.5 - m) * ps
-            for b in range(0, res):
-                v.y = (b + 0.5 - m) * ps
-                if v.length <= r:
-                    car.itemset((a, b), 0)
-    elif type == 'BALL' or type == 'BALLNOSE':
-        for a in range(0, res):
-            v.x = (a + 0.5 - m) * ps
-            for b in range(0, res):
-                v.y = (b + 0.5 - m) * ps
-                if v.length <= r:
-                    z = math.sin(math.acos(v.length / r)) * r - r
-                    car.itemset((a, b), z)  # [a,b]=z
+    millRadius = operation.cutter_diameter / 2 + operation.skin
+    resolution = math.ceil((millRadius * 2) / pixelSize)
+    midLengthOffset = resolution / 2.0
+    cutterArray = np.array((0), dtype=float)
+    cutterArray.resize(resolution, resolution)
+    cutterArray.fill(-10)
 
-    elif type == 'VCARVE':
+    resolutionArray = (
+        mathutils.Vector
+            (
+                (x + 0.5 - midLengthOffset) * pixelSize,
+                (y + 0.5 - midLengthOffset) * pixelSize
+            )
+        for x in range(0, resolution)
+        for y in range(0, resolution)
+    )
+
+    resolutionArrayFiltered = (
+        vector
+        for vector in resolutionArray
+        if vector.length <= millRadius
+    )
+
+    vector = mathutils.Vector((0, 0, 0))
+    if cutterType == 'END':
+        for x in range(0, resolution):
+            vector.x = (x + 0.5 - midLengthOffset) * pixelSize
+            for y in range(0, resolution):
+                vector.y = (y + 0.5 - midLengthOffset) * pixelSize
+
+                if vector.length <= millRadius:
+                    cutterArray.itemset((x, y), 0)
+    elif cutterType == 'BALL' or cutterType == 'BALLNOSE':
+        for x in range(0, resolution):
+            vector.x = (x + 0.5 - midLengthOffset) * pixelSize
+            for y in range(0, resolution):
+                vector.y = (y + 0.5 - midLengthOffset) * pixelSize
+                if vector.length <= millRadius:
+                    z = math.sin(math.acos(vector.length / millRadius)) * millRadius - millRadius
+                    cutterArray.itemset((x, y), z)  # [a,b]=z
+
+    elif cutterType == 'VCARVE':
         angle = operation.cutter_tip_angle
         s = math.tan(math.pi * (90 - angle / 2) / 180)  # angle in degrees
-        for a in range(0, res):
-            v.x = (a + 0.5 - m) * ps
-            for b in range(0, res):
-                v.y = (b + 0.5 - m) * ps
-                if v.length <= r:
-                    z = (-v.length * s)
-                    car.itemset((a, b), z)
-    elif type == 'CYLCONE':
+        for x in range(0, resolution):
+            vector.x = (x + 0.5 - midLengthOffset) * pixelSize
+            for y in range(0, resolution):
+                vector.y = (y + 0.5 - midLengthOffset) * pixelSize
+                if vector.length <= millRadius:
+                    z = (-vector.length * s)
+                    cutterArray.itemset((x, y), z)
+    elif cutterType == 'CYLCONE':
         angle = operation.cutter_tip_angle
         cyl_r = operation.cylcone_diameter/2
         s = math.tan(math.pi * (90 - angle / 2) / 180)  # angle in degrees
-        for a in range(0, res):
-            v.x = (a + 0.5 - m) * ps
-            for b in range(0, res):
-                v.y = (b + 0.5 - m) * ps
-                if v.length <= r:
-                    z = (-(v.length - cyl_r) * s)
-                    if v.length <= cyl_r:
+        for x in range(0, resolution):
+            vector.x = (x + 0.5 - midLengthOffset) * pixelSize
+            for y in range(0, resolution):
+                vector.y = (y + 0.5 - midLengthOffset) * pixelSize
+                if vector.length <= millRadius:
+                    z = (-(vector.length - cyl_r) * s)
+                    if vector.length <= cyl_r:
                         z = 0
-                    car.itemset((a, b), z)
-    elif type == 'BALLCONE':
+                    cutterArray.itemset((x, y), z)
+    elif cutterType == 'BALLCONE':
         angle = math.radians(operation.cutter_tip_angle)/2
         ball_r = operation.ball_radius
         cutter_r = operation.cutter_diameter / 2
@@ -345,32 +361,32 @@ def getCutterArray(operation, pixsize):
         Ball_R = ball_r/math.cos(angle)
         D_ofset = ball_r * math.tan(angle)
         s = math.tan(math.pi/2-angle)
-        for a in range(0, res):
-            v.x = (a + 0.5 - m) * ps
-            for b in range(0, res):
-                v.y = (b + 0.5 - m) * ps
-                if v.length <= cutter_r:
-                    z = -(v.length - ball_r) * s - Ball_R + D_ofset
-                    if v.length <= ball_r:
-                        z = math.sin(math.acos(v.length / Ball_R)) * Ball_R - Ball_R
-                    car.itemset((a, b), z)
-    elif type == 'CUSTOM':
+        for x in range(0, resolution):
+            vector.x = (x + 0.5 - midLengthOffset) * pixelSize
+            for y in range(0, resolution):
+                vector.y = (y + 0.5 - midLengthOffset) * pixelSize
+                if vector.length <= cutter_r:
+                    z = -(vector.length - ball_r) * s - Ball_R + D_ofset
+                    if vector.length <= ball_r:
+                        z = math.sin(math.acos(vector.length / Ball_R)) * Ball_R - Ball_R
+                    cutterArray.itemset((x, y), z)
+    elif cutterType == 'CUSTOM':
         cutob = bpy.data.objects[operation.cutter_object_name]
-        scale = ((cutob.dimensions.x / cutob.scale.x) / 2) / r  #
+        scale = ((cutob.dimensions.x / cutob.scale.x) / 2) / millRadius  #
         # print(cutob.scale)
         vstart = mathutils.Vector((0, 0, -10))
         vend = mathutils.Vector((0, 0, 10))
         print('sampling custom cutter')
         maxz = -1
-        for a in range(0, res):
-            vstart.x = (a + 0.5 - m) * ps * scale
+        for x in range(0, resolution):
+            vstart.x = (x + 0.5 - midLengthOffset) * pixelSize * scale
             vend.x = vstart.x
 
-            for b in range(0, res):
-                vstart.y = (b + 0.5 - m) * ps * scale
+            for y in range(0, resolution):
+                vstart.y = (y + 0.5 - midLengthOffset) * pixelSize * scale
                 vend.y = vstart.y
-                v = vend - vstart
-                c = cutob.ray_cast(vstart, v, distance=1.70141e+38)
+                vector = vend - vstart
+                c = cutob.ray_cast(vstart, vector, distance=1.70141e+38)
                 if c[3] != -1:
                     z = -c[1][2] / scale
                     # print(c)
@@ -378,9 +394,9 @@ def getCutterArray(operation, pixsize):
                         # print(z)
                         if z > maxz:
                             maxz = z
-                        car.itemset((a, b), z)
-        car -= maxz
-    return car
+                        cutterArray.itemset((x, y), z)
+        cutterArray -= maxz
+    return cutterArray
 
 
 def simCutterSpot(xs, ys, z, cutterArray, si, getvolume=False):

@@ -3,7 +3,7 @@ from bpy.types import Panel
 
 from ..operation import AddChain
 from .ButtonsPanel import ButtonsPanel
-from ..list.Chains import Chains
+from ..list.ChainList import ChainList
 
 class ChainsPanel(ButtonsPanel, Panel):
     """CAM chains panel"""
@@ -20,4 +20,4 @@ class ChainsPanel(ButtonsPanel, Panel):
 
         column = layout.column(align=True)
         column.operator(AddChain.bl_idname, icon='ADD', text="Add chain")
-        column.template_list(Chains.bl_idname, '', scene, "cam_chains", scene, 'cam_active_chain', rows=2)
+        column.template_list(ChainList.bl_idname, '', scene, "cam_chains", scene, 'cam_active_chain', rows=2)

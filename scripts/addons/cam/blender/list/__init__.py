@@ -1,3 +1,3 @@
-from .Chains import *
-from .Operations import *
-from .Orientations import *
+from .ChainList import *
+from .OperationList import *
+from .OrientationList import *

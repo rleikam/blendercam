@@ -96,7 +96,9 @@ def getLayers(operation, startdepth, enddepth):
     return layers
 
 def chunksToMesh(chunks : camPathChunk, operation):
-    """convert sampled chunks to path, optimization of paths"""
+    """
+    Convert sampled chunks to path, optimization of paths
+    """
     expiredTime = time.time()
     scene = bpy.context.scene
     camMachine = scene.cam_machine
@@ -116,8 +118,8 @@ def chunksToMesh(chunks : camPathChunk, operation):
     if operation.machine_axes != '3':
         verts_rotations = []
     
-    if (operation.machine_axes == '5' and operation.strategy5axis == 'INDEXED') or (
-            operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):
+    if (operation.machine_axes == '5' and operation.strategy5axis == 'INDEXED') or \
+        (operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):
         extendChunks5axis(chunks, operation)
 
     if operation.array:
@@ -145,13 +147,15 @@ def chunksToMesh(chunks : camPathChunk, operation):
             # lift and drop
 
             if lifted:  # did the cutter lift before? if yes, put a new position above of the first point of next chunk.
-                if operation.machine_axes == '3' or (operation.machine_axes == '5' and operation.strategy5axis == 'INDEXED') or (
-                        operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):
-                    v = (chunk.points[0][0], chunk.points[0][1], free_movement_height)
+                if operation.machine_axes == '3' or \
+                    (operation.machine_axes == '5' and operation.strategy5axis == 'INDEXED') or \
+                    (operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):
+
+                    vertex = (chunk.points[0][0], chunk.points[0][1], free_movement_height)
                 else:  # otherwise, continue with the next chunk without lifting/dropping
-                    v = chunk.startpoints[0]  # startpoints=retract points
+                    vertex = chunk.startpoints[0]  # startpoints=retract points
                     verts_rotations.append(chunk.rotations[0])
-                vertices.append(v)
+                vertices.append(vertex)
 
             # add whole chunk
             vertices.extend(chunk.points)
@@ -178,11 +182,11 @@ def chunksToMesh(chunks : camPathChunk, operation):
             if lift:
                 if operation.machine_axes == '3' or (operation.machine_axes == '5' and operation.strategy5axis == 'INDEXED') or (
                         operation.machine_axes == '4' and operation.strategy4axis == 'INDEXED'):
-                    v = (chunk.points[-1][0], chunk.points[-1][1], free_movement_height)
+                    vertex = (chunk.points[-1][0], chunk.points[-1][1], free_movement_height)
                 else:
-                    v = chunk.startpoints[-1]
+                    vertex = chunk.startpoints[-1]
                     verts_rotations.append(chunk.rotations[-1])
-                vertices.append(v)
+                vertices.append(vertex)
             lifted = lift
 
     if operation.optimisation.use_exact and not operation.optimisation.use_opencamlib:
@@ -191,29 +195,29 @@ def chunksToMesh(chunks : camPathChunk, operation):
     expiredTime = time.time()
 
     # actual blender object generation starts here:
+    pathObjectName = getCAMPathObjectNameConventionFrom(operation.name)
+
+    mesh = bpy.data.meshes.new(pathObjectName)
+    mesh.name = pathObjectName
+
     edges = [(index, index+1) for index in range(0, len(vertices) - 1)]
-
-    objectName = getCAMPathObjectNameConventionFrom(operation.name)
-
-    mesh = bpy.data.meshes.new(objectName)
-    mesh.name = objectName
     mesh.from_pydata(vertices, edges, [])
 
-    if objectName in scene.objects:
-        scene.objects[objectName].data = mesh
-        object = scene.objects[objectName]
+    if pathObjectName in scene.objects:
+        scene.objects[pathObjectName].data = mesh
+        pathObject = scene.objects[pathObjectName]
     else:
-        object = object_utils.object_data_add(bpy.context, mesh, operator=None)
+        pathObject = object_utils.object_data_add(bpy.context, mesh, operator=None)
 
         collection = getCAMPathCollection()
-        reassignObjectsToCollection([object], collection)
+        reassignObjectsToCollection([pathObject], collection)
 
     if operation.machine_axes != '3':
         # store rotations into shape keys, only way to store large arrays with correct floating point precision
         # - object/mesh attributes can only store array up to 32000 intems.
 
-        object.shape_key_add()
-        object.shape_key_add()
+        pathObject.shape_key_add()
+        pathObject.shape_key_add()
         shapeKey = mesh.shape_keys.key_blocks[1]
         shapeKey.name = 'rotations'
         print(len(shapeKey.data))
@@ -224,16 +228,16 @@ def chunksToMesh(chunks : camPathChunk, operation):
 
     print(time.time() - expiredTime)
 
-    object.location = (0, 0, 0)
-    operation.path_object_name = objectName
+    pathObject.location = (0, 0, 0)
+    operation.path_object_name = pathObjectName
 
     # parent the path object to source object if object mode
     if (operation.geometry_source == 'OBJECT') and operation.parent_path_to_object:
         activate(operation.objects[0])
-        object.select_set(state=True, view_layer=None)
+        pathObject.select_set(state=True, view_layer=None)
         bpy.ops.object.parent_set(type='OBJECT', keep_transform=True)
     else:
-        object.select_set(state=True, view_layer=None)
+        pathObject.select_set(state=True, view_layer=None)
 
 
 def checkminz(operation):

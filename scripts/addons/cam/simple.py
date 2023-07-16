@@ -158,21 +158,21 @@ def isVerticalLimit(v1, v2, limit):
     return v1, v2
 
 
-def getCachePath(o):
-    fn = bpy.data.filepath
-    l = len(bpy.path.basename(fn))
-    bn = bpy.path.basename(fn)[:-6]
-    print('fn-l:', fn[:-l])
-    print('bn:', bn)
+def getCachePath(operation):
+    filePath = bpy.data.filepath
+    filePathLength = len(bpy.path.basename(filePath))
+    baseName = bpy.path.basename(filePath)[:-6]
+    print('fn-l:', filePath[:-filePathLength])
+    print('bn:', baseName)
 
-    iname = fn[:-l] + 'temp_cam' + os.sep + bn + '_' + o.name
+    iname = filePath[:-filePathLength] + 'temp_cam' + os.sep + baseName + '_' + operation.name
     return iname
 
 
 def getSimulationPath():
-    fn = bpy.data.filepath
-    l = len(bpy.path.basename(fn))
-    iname = fn[:-l] + 'temp_cam' + os.sep
+    filePath = bpy.data.filepath
+    filePathLength = len(bpy.path.basename(filePath))
+    iname = filePath[:-filePathLength] + 'temp_cam' + os.sep
     return iname
 
 

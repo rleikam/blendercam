@@ -960,19 +960,19 @@ def connectChunksLow(chunks, operation):
 
     connectedchunks = []
     chunks_to_resample = []  # for OpenCAMLib sampling
-    mergedist = 3 * operation.dist_between_paths
+    mergeDistance = 3 * operation.dist_between_paths
     if operation.strategy == 'PENCIL':  # this is bigger for pencil path since it goes on the surface to clean up the rests,
         # and can go to close points on the surface without fear of going deep into material.
-        mergedist = 10 * operation.dist_between_paths
+        mergeDistance = 10 * operation.dist_between_paths
 
     if operation.strategy == 'MEDIAL_AXIS':
-        mergedist = 1 * operation.medial_axis_subdivision
+        mergeDistance = 1 * operation.medial_axis_subdivision
 
     if operation.parallel_step_back:
-        mergedist *= 2
+        mergeDistance *= 2
 
     if operation.merge_dist > 0:
-        mergedist = operation.merge_dist
+        mergeDistance = operation.merge_dist
     # mergedist=10
     lastChunk = None
     i = len(chunks)
@@ -980,7 +980,7 @@ def connectChunksLow(chunks, operation):
 
     for chunk in chunks:
         if len(chunk.points) > 0:
-            if lastChunk is not None and (chunk.distStart(pos, operation) < mergedist):
+            if lastChunk is not None and (chunk.distStart(pos, operation) < mergeDistance):
                 # CARVE should lift allways, when it goes below surface...
                 # print(mergedist,ch.dist(pos,o))
                 if operation.strategy == 'PARALLEL' or operation.strategy == 'CROSS' or operation.strategy == 'PENCIL':
@@ -1008,7 +1008,7 @@ def connectChunksLow(chunks, operation):
     return connectedchunks
 
 
-def getClosest(o, pos, chunks):
+def getClosest(operation, position, chunks):
     # ch=-1
     mind = 2000
     d = 100000000000
@@ -1020,7 +1020,7 @@ def getClosest(o, pos, chunks):
                 cango = False
                 break
         if cango:
-            d = chtest.dist(pos, o)
+            d = chtest.dist(position, operation)
             if d < mind:
                 ch = chtest
                 mind = d
@@ -1031,35 +1031,34 @@ def sortChunks(chunks, operation):
     if operation.strategy != 'WATERLINE':
         progress('sorting paths')
     sys.setrecursionlimit(100000)  
-    sortedchunks = []
+    sortedChunks = []
 
     lastChunk = None
-    i = len(chunks)
-    pos = (0, 0, 0)
+    position = (0, 0, 0)
 
     while len(chunks) > 0:
-        ch = None
-        if len(sortedchunks) == 0 or len(
+        chunk = None
+        if len(sortedChunks) == 0 or len(
                 lastChunk.parents) == 0:  # first chunk or when there are no parents -> parents come after children here...
-            ch = getClosest(operation, pos, chunks)
+            chunk = getClosest(operation, position, chunks)
         elif len(lastChunk.parents) > 0:  # looks in parents for next candidate, recursively
             for parent in lastChunk.parents:
-                ch = parent.getNextClosest(operation, pos)
-                if ch is not None:
+                chunk = parent.getNextClosest(operation, position)
+                if chunk is not None:
                     break
-            if ch is None:
-                ch = getClosest(operation, pos, chunks)
+            if chunk is None:
+                chunk = getClosest(operation, position, chunks)
 
-        if ch is not None:  # found next chunk, append it to list
+        if chunk is not None:  # found next chunk, append it to list
             # only adaptdist the chunk if it has not been sorted before
-            if not ch.sorted:
-                ch.adaptdist(pos, operation)
-                ch.sorted = True
+            if not chunk.sorted:
+                chunk.adaptdist(position, operation)
+                chunk.sorted = True
             # print(len(ch.parents),'children')
-            chunks.remove(ch)
-            sortedchunks.append(ch)
-            lastChunk = ch
-            pos = lastChunk.points[-1]
+            chunks.remove(chunk)
+            sortedChunks.append(chunk)
+            lastChunk = chunk
+            position = lastChunk.points[-1]
         # print(i, len(chunks))
         # experimental fix for infinite loop problem
         # else:
@@ -1073,17 +1072,15 @@ def sortChunks(chunks, operation):
         # print("no chunks found closest. Chunks not sorted: ", len(chunks))
         # sortedchunks.extend(chunks)
         # chunks[:] = []
-
-        i -= 1
     if operation.strategy == 'POCKET' and operation.pocket_option == 'OUTSIDE':
-        sortedchunks.reverse()
+        sortedChunks.reverse()
 
     sys.setrecursionlimit(1000)
     if operation.strategy != 'DRILL' and operation.strategy != 'OUTLINEFILL':
         # THIS SHOULD AVOID ACTUALLY MOST STRATEGIES, THIS SHOULD BE DONE MANUALLY,
         # BECAUSE SOME STRATEGIES GET SORTED TWICE.
-        sortedchunks = connectChunksLow(sortedchunks, operation)
-    return sortedchunks
+        sortedChunks = connectChunksLow(sortedChunks, operation)
+    return sortedChunks
 
 def getVectorRight(lastVector, verts):  # most right vector from a set regarding angle..
     defa = 100
@@ -1355,8 +1352,8 @@ def getCAMPathObjectNameConventionFrom(name):
 def getCAMMachineObjectName():
     return f"CAMMachine"
 
-def getCAMMaterialObjectName(name):
-    return f"CAMMaterial_{name}"
+def getCAMMaterialObjectName():
+    return f"CAMMaterial"
 
 def getCAMSimulationObjectNameConventionFrom(name):
     return f"CAMSimulation_{name}"
@@ -1381,6 +1378,94 @@ def addTranspMat(ob, mname, color, alpha):
         else:
             ob.data.materials.append(mat)
 
+def getCentroidOfPoints(points):
+    """
+    Calculates and returns the centroid of the given points.
+
+    Keyword arguments:
+    points -- The points, where the centroid should be caluclated.
+    """
+    pointSummation = mathutils.Vector([0.0, 0.0])
+    
+    for point in points:
+        pointSummation += point;
+        
+    pointCount = len(points)
+    
+    return pointSummation/pointCount
+
+def createMeshWithConvexHullAndCentroid(convexHullPath, centroid):
+    """
+    Creates a convex hull mesh with the centroid given as the center point of the triangle fan.
+    """
+    pointCount = len(convexHullPath)
+    
+    mesh = []
+    for i in range(pointCount):
+        mesh.append([convexHullPath[i], convexHullPath[(i+1)%pointCount], centroid])
+    
+    return mesh
+    
+def getConvexHullMesh2D(objectPoints):
+    """
+    Creates a 2D convex hull based on the x and y components of the object points.
+    """
+    uniquePoints = numpy.unique(objectPoints, axis=0)
+    uniquePoints = [mathutils.Vector(point).xy for point in uniquePoints]
+    
+    convexHullIndices = mathutils.geometry.convex_hull_2d(uniquePoints)
+    
+    convexHullPath = [uniquePoints[index] for index in convexHullIndices]
+    centroidPoint = getCentroidOfPoints(convexHullPath)
+    
+    convexHullMesh = createMeshWithConvexHullAndCentroid(convexHullPath, centroidPoint)
+    
+    return convexHullMesh
+    
+def isPointInMesh(point, mesh):
+    """
+    Checks if the given point is in the 2D mesh. The mesh must conists as a series of triangles.
+    """
+    for face in mesh:
+        isInFace = mathutils.geometry.intersect_point_tri_2d(point, face[0], face[1], face[2])
+        
+        if isInFace: return True
+        
+    return False
+
+def placeObjectsUnder(sourceObjects, targetObject, offset):
+    """
+    Places a given set of source objects under a target object.
+    The source objects are placed such that the bounding boxes of the source object are touching target object.
+    The offset additionaly moves the source objects along the z axis.
+    """
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    targetObjectWithModifiers = targetObject.evaluated_get(depsgraph) 
+    targetObjectMatrix = targetObject.matrix_world
+    targetObjectMesh = [(targetObjectMatrix @ vertex.co) for vertex in targetObjectWithModifiers.data.vertices]
+    
+    for sourceObject in sourceObjects:
+        print("Placing object: " + sourceObject.name)
+        sourceObjectBoundingBox = [mathutils.Vector(point) for point in sourceObject.bound_box]
+        sourceObjectMatrix = sourceObject.matrix_world
+        
+        sourceObjectTransformedBoundingBox = [sourceObjectMatrix @ point for point in sourceObjectBoundingBox]
+        sourceObjectMesh = getConvexHullMesh2D(sourceObjectTransformedBoundingBox)
+        
+        filteredVertices = filter(lambda vertex: isPointInMesh(vertex, sourceObjectMesh), targetObjectMesh)
+        
+        nextObject = next(filteredVertices, None)
+        
+        if nextObject == None:
+            continue
+        
+        lowestDepth = nextObject.z
+        
+        for vertex in filteredVertices:
+            if vertex.z < lowestDepth:
+                lowestDepth = vertex.z
+            
+        sourceObject.location.z = lowestDepth - offset
 
 def addMachineAreaObject():
     scene = bpy.context.scene
@@ -1513,11 +1598,9 @@ def addMaterialAreaObject():
     object.dimensions = (
         operation.max.x - operation.min.x, operation.max.y - operation.min.y, operation.max.z - operation.min.z)
     object.location = (operation.min.x, operation.min.y, operation.max.z)
+
     if activeObject is not None:
         activeObject.select_set(True)
-    # else:
-    #     bpy.context.scene.objects.active = None
-
 
 def getContainer():
     scene = bpy.context.scene

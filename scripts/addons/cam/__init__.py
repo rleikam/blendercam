@@ -63,8 +63,8 @@ bl_info = {
 classes = [
     AddonPreference,
     OperationListExpansionsProperties,
-    Operations,
-    Chains,
+    OperationList,
+    ChainList,
     OperationReferenceProperties,
     ChainProperties,
     MachineProperties,
@@ -124,6 +124,7 @@ classes = [
     CamCurveOvercutsB,
     CamCurveRemoveDoubles,
     CamMeshGetPockets,
+    CamMapObjectToTarget,
 
     CamSineCurve,
     CamLissajousCurve,

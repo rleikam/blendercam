@@ -98,11 +98,10 @@ class camPathChunk:
             self.points[index] = (point[0], point[1], z + point[2])
 
     def isbelowZ(self, z):
-        isbelow = False
-        for point in self.points:
-            if point[2] <= z:
-                isbelow = True
-        return isbelow
+        pointsBelowZ = (point for point in self.points if point[2] <= z)
+        foundPoint = next(pointsBelowZ, None)
+
+        return True if foundPoint else False
 
     def clampZ(self, z):
         for index, point in enumerate(self.points):
@@ -1055,40 +1054,78 @@ def chunksRefine(chunks, o):
 
     return chunks
 
-
 def chunksRefineThreshold(chunks, distance, limitdistance):
     """add extra points in between for chunks. For medial axis strategy only !"""
     for chunk in chunks:
-        newchunk = []
-        v2 = Vector(chunk.points[0])
+        newChunk = []
+        lineVectorStartPoint = Vector(chunk.points[0])
         for point in chunk.points:
-            v1 = Vector(point)
-            vector = v1 - v2
+            lineVectorEndPoint = Vector(point)
+            lineVector = lineVectorEndPoint - lineVectorStartPoint
 
-            if vector.length > limitdistance:
-                vectorDistance = vector.length
-                vector.normalize()
+            if lineVector.length > limitdistance:
+                lineVectorLength = lineVector.length
+                lineVector.normalize()
                 i = 1
                 vref = Vector((0, 0, 0))
-                while vref.length < vectorDistance / 2:
+                while vref.length < lineVectorLength / 2:
 
-                    vref = vector * distance * i
-                    if vref.length < vectorDistance:
-                        p = v2 + vref
+                    vref = lineVector * distance * i
+                    if vref.length < lineVectorLength:
+                        p = lineVectorStartPoint + vref
 
-                        newchunk.append((p.x, p.y, p.z))
+                        newChunk.append((p.x, p.y, p.z))
                     i += 1
-                    vref = vector * distance * i  # because of the condition, so it doesn't run again.
-                while i > 0:
-                    vref = vector * distance * i
-                    if vref.length < vectorDistance:
-                        p = v1 - vref
+                    vref = lineVector * distance * i
 
-                        newchunk.append((p.x, p.y, p.z))
+                while i > 0:
+                    vref = lineVector * distance * i
+                    if vref.length < lineVectorLength:
+                        p = lineVectorEndPoint - vref
+
+                        newChunk.append((p.x, p.y, p.z))
                     i -= 1
 
-            newchunk.append(point)
-            v2 = v1
-        chunk.points = newchunk
+            newChunk.append(point)
+            lineVectorStartPoint = lineVectorEndPoint
+        chunk.points = newChunk
+
+    return chunks
+
+def newchunksRefineThreshold(chunks: list[camPathChunk], lineSubdivisionLength, minimalLineLength):
+    """add extra points in between for chunks. For medial axis strategy only !"""
+    for chunk in chunks:
+        newChunk = []
+
+        lineVectorStartPoint = Vector(chunk.points[0])
+        for point in chunk.points:
+            lineVectorEndPoint = Vector(point)
+            lineVector = lineVectorEndPoint - lineVectorStartPoint
+
+            if lineVector.length > minimalLineLength:
+                lineVectorLength = lineVector.length
+                lineVector.normalize()
+                i = 1
+                vref = Vector((0, 0, 0))
+                while vref.length < lineVectorLength / 2:
+
+                    vref = lineVector * lineSubdivisionLength * i
+                    if vref.length < lineVectorLength:
+                        p = lineVectorStartPoint + vref
+
+                        newChunk.append((p.x, p.y, p.z))
+                    i += 1
+                    vref = lineVector * lineSubdivisionLength * i 
+                while i > 0:
+                    vref = lineVector * lineSubdivisionLength * i
+                    if vref.length < lineVectorLength:
+                        p = lineVectorEndPoint - vref
+
+                        newChunk.append((p.x, p.y, p.z))
+                    i -= 1
+
+            newChunk.append(point)
+            lineVectorStartPoint = lineVectorEndPoint
+        chunk.points = newChunk
 
     return chunks
