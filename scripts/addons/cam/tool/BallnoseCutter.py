@@ -32,9 +32,9 @@ class BallnoseCutter(Cutter):
         # Calculate mill diameter with the pythagorean theorem
         invertedMillDepth = self.ballRadius - depth
         squaredInvertedMillDepth = pow(invertedMillDepth, 2)
-        millDiameter = sqrt(self.squaredBallRadius - squaredInvertedMillDepth)
+        millRadius = sqrt(self.squaredBallRadius - squaredInvertedMillDepth)
 
-        return millDiameter
+        return millRadius*2
 
     def getMaximumToolLength(self) -> float:
         return self.ballRadius
