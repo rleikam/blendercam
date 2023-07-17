@@ -1,30 +1,17 @@
 import bpy
 from bpy.props import *
-import time
-import math
 from math import *
 from bpy_extras import object_utils
 from cam.chunk import *
 from cam.collision import *
-from cam import simple
 from cam.simple import *
 from cam.pattern import *
-from cam import utils, bridges, ops
+from cam import utils
 from cam.utils import *
-from cam import polygon_utils_cam
 from cam.polygon_utils_cam import *
 from cam.image_utils import *
-from enum import Enum
-from typing import Iterator
 
 from cam.strategy.utility import *
-
-from concurrent.futures import ThreadPoolExecutor
-
-from shapely.geometry import polygon as spolygon
-from shapely import geometry as sgeometry
-from shapely import affinity
-
 SHAPELY = True
 
 def curve(operation):
