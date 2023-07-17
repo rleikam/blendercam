@@ -1,14 +1,40 @@
 from .Cutter import *
+from math import pow, sqrt
 
 class BallnoseCutter(Cutter):
     def __init(self, diameter):
-        self.maximumToolDepth = diameter/2
+        self.ballRadius = diameter/2
+        self.squaredBallRadius = pow(self.ballRadius, 2)
+
 
     def calculateMillDepthFor(self, diameter: float) -> float:
-        pass
+        millRadius = diameter/2
+        if millRadius >= self.ballRadius:
+            return self.ballRadius
+        
+        if millRadius <= 0:
+            return 0
+
+        # Calculate mill depth with the pythagorean theorem
+        squaredMillRadius = pow(millRadius, 2)
+        invertedMillDepth = sqrt(self.squaredBallRadius - squaredMillRadius)
+        millDepth = self.ballRadius - invertedMillDepth
+
+        return millDepth
     
     def calculateMillDiameterFor(self, depth: float) -> float:
-        pass
+        if depth >= self.ballRadius:
+            return self.ballRadius
+        
+        if depth <= 0:
+            return 0
+        
+        # Calculate mill diameter with the pythagorean theorem
+        invertedMillDepth = self.ballRadius - depth
+        squaredInvertedMillDepth = pow(invertedMillDepth, 2)
+        millDiameter = sqrt(self.squaredBallRadius - squaredInvertedMillDepth)
+
+        return millDiameter
 
     def getMaximumToolLength(self) -> float:
-        pass
+        return self.ballRadius
