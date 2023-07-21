@@ -320,18 +320,19 @@ def getCutterArray(operation, pixelSize):
                     cutterArray.itemset((x, y), 0)
 
         case 'BALL' | 'BALLNOSE':
+
+            tool = ToolManager.constructToolFromOperation(operation)
             for x, y, vector in resolutionArray:
                 if vector.length <= millRadius:
-                    z = math.sin(math.acos(vector.length / millRadius)) * millRadius - millRadius
+                    z = -tool.calculateMillDepthFor(vector.length*2)
                     cutterArray.itemset((x, y), z)
 
         case 'VCARVE':
-            angle = operation.cutter_tip_angle
-            slope = math.tan(math.radians(angle / 2))
+            tool = ToolManager.constructToolFromOperation(operation)
 
             for x, y, vector in resolutionArray:
                 if vector.length <= millRadius:
-                    z = (-vector.length / slope)
+                    z = -tool.calculateMillDepthFor(vector.length*2)
                     cutterArray.itemset((x, y), z)
 
         case 'CYLCONE':
@@ -347,32 +348,17 @@ def getCutterArray(operation, pixelSize):
                     cutterArray.itemset((x, y), z)
 
         case 'BALLCONE':
-            angle = math.radians(operation.cutter_tip_angle)/2
-            ballRadius = operation.ball_radius
-            cutterRadius = operation.cutter_diameter / 2
-            Ball_R = operation.ball_radius/math.cos(angle)
-            D_ofset = operation.ball_radius * math.tan(angle)
-            slope = math.tan(math.pi/2-angle)
-
             tool = ToolManager.constructToolFromOperation(operation)
             
             for x, y, vector in resolutionArray:
-                if vector.length <= cutterRadius:
+                if vector.length <= millRadius:
                     z = -tool.calculateMillDepthFor(vector.length*2)
                     cutterArray.itemset((x, y), z)
             
-            """
-            for x, y, vector in resolutionArray:
-                if vector.length <= cutterRadius:
-                    z = -(vector.length - ballRadius) * slope - Ball_R + D_ofset
-                    if vector.length <= ballRadius:
-                        z = math.sin(math.acos(vector.length / Ball_R)) * Ball_R - Ball_R
-                    cutterArray.itemset((x, y), z)
-            """
         case 'CUSTOM':
-            cutob = bpy.data.objects[operation.cutter_object_name]
-            scale = ((cutob.dimensions.x / cutob.scale.x) / 2) / millRadius  #
-            # print(cutob.scale)
+            cutterObject = bpy.data.objects[operation.cutter_object_name]
+            scale = ((cutterObject.dimensions.x / cutterObject.scale.x) / 2) / millRadius  #
+
             vstart = mathutils.Vector((0, 0, -10))
             vend = mathutils.Vector((0, 0, 10))
             print('sampling custom cutter')
@@ -385,7 +371,7 @@ def getCutterArray(operation, pixelSize):
                     vstart.y = (y + 0.5 - midLengthOffset) * pixelSize * scale
                     vend.y = vstart.y
                     vector = vend - vstart
-                    c = cutob.ray_cast(vstart, vector, distance=1.70141e+38)
+                    c = cutterObject.ray_cast(vstart, vector, distance=1.70141e+38)
                     if c[3] != -1:
                         z = -c[1][2] / scale
                         # print(c)

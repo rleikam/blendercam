@@ -2,7 +2,7 @@ from .Cutter import *
 from math import pow, sqrt
 
 class BallnoseCutter(Cutter):
-    def __init(self, diameter):
+    def __init__(self, diameter):
         self.ballRadius = diameter/2
         self.squaredBallRadius = pow(self.ballRadius, 2)
 

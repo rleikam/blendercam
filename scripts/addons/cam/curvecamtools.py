@@ -667,11 +667,43 @@ class CamOffsetSilhouete(bpy.types.Operator):
     bl_label = "Silhouete offset"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
-    offset: FloatProperty(name="offset", default=.003, min=-100, max=100, precision=4, unit="LENGTH")
-    mitrelimit: FloatProperty(name="Mitre Limit", default=.003, min=0.0, max=20, precision=4, unit="LENGTH")
-    style: EnumProperty(name="type of curve", items=(
-        ('1', 'Round', ''), ('2', 'Mitre', ''), ('3', 'Bevel', '')))
-    opencurve: BoolProperty(name="Dialate open curve", default=False)
+    offset: FloatProperty(
+        name="offset",
+        default=.003,
+        min=-100, 
+        max=100, 
+        precision=4, 
+        unit="LENGTH"
+    )
+
+    mitrelimit: FloatProperty(
+        name="Mitre Limit", 
+        default=.003, 
+        min=0.0, 
+        max=20, 
+        precision=4, 
+        unit="LENGTH"
+    )
+
+    style: EnumProperty(
+        name="type of curve", 
+        items=(
+            ('1', 'Round', ''), 
+            ('2', 'Mitre', ''), 
+            ('3', 'Bevel', '')
+        )
+    )
+
+    openCurve: BoolProperty(
+        name = "Dialate open curve", 
+        default = False
+    )
+
+    considerZValue: BoolProperty(
+        name = "Include Z value",
+        description = "Considers the Z value for the offset, otherwise Z values are ignored",
+        default = False
+    )
 
     @classmethod
     def poll(cls, context):
@@ -683,16 +715,17 @@ class CamOffsetSilhouete(bpy.types.Operator):
         bpy.ops.object.curve_remove_doubles()
         object = context.active_object
 
-        if self.opencurve and object.type == 'CURVE':
+        if self.openCurve and object.type == 'CURVE':
             newObject = object.copy()
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             newObject.data.resolution_u = 60
             bpy.ops.object.convert(target='MESH')
             bpy.context.active_object.name = "temp_mesh"
 
-            coords = []
-            for v in newObject.data.vertices:  # extract X,Y coordinates from the vertices data
-                coords.append((v.co.x, v.co.y))
+            coords = [
+                (vertex.co.x, vertex.co.y)
+                for vertex in newObject.data.vertices
+            ]
 
             simple.remove_multiple('temp_mesh')  # delete temporary mesh
             simple.remove_multiple('dilation')  # delete old dilation objects

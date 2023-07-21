@@ -900,7 +900,6 @@ def polygonBoolean(context, boolean_type):
 
     return {'FINISHED'}
 
-
 def polygonConvexHull(context):
     coords = []
 
@@ -1444,8 +1443,10 @@ def placeObjectsUnder(sourceObjects, targetObject, offset):
     targetObjectMatrix = targetObject.matrix_world
     targetObjectMesh = [(targetObjectMatrix @ vertex.co) for vertex in targetObjectWithModifiers.data.vertices]
     
-    for sourceObject in sourceObjects:
-        print("Placing object: " + sourceObject.name)
+    sourceObjectCount = len(sourceObjects)
+    for objectIndex, sourceObject in enumerate(sourceObjects):
+
+        print(f"({objectIndex+1}/{sourceObjectCount}) Placing object: {sourceObject.name}")
         sourceObjectBoundingBox = [mathutils.Vector(point) for point in sourceObject.bound_box]
         sourceObjectMatrix = sourceObject.matrix_world
         

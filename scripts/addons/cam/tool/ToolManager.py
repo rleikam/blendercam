@@ -2,6 +2,7 @@ from .ToolType import *
 from .ConeCutter import *
 from .BallconeCutter import *
 from .BallnoseCutter import *
+from .EndmillCutter import * 
 from typing import Iterator
 
 class ToolManager:
@@ -13,6 +14,8 @@ class ToolManager:
         """Constructs a matching mill from the given operation"""
 
         match(operation.cutter_type):
+            case ToolType.END.value:
+                return EndmillCutter(operation.cutter_diameter)
             case ToolType.CONE.value:
                 return ConeCutter(operation.cutter_tip_angle, operation.cutter_diameter)
             case ToolType.BALLNOSE.value:

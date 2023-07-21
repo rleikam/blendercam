@@ -1,8 +1,7 @@
-from .Cutter import *
-from math import pow, sqrt
+from .Cutter import Cutter
 
 class EndmillCutter(Cutter):
-    def __init(self, diameter):
+    def __init__(self, diameter):
         self.diameter = diameter
 
     def calculateMillDepthFor(self, diameter: float) -> float:

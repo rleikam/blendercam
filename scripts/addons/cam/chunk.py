@@ -944,30 +944,29 @@ def restoreVisibility(o, storage):
     for i in range(0, 20):
         o.layers[i] = storage[1][i]
 
-def meshFromCurve(o, use_modifiers=False):
-    # print(o.name,o)
-    activate(o)
+def meshFromCurve(operation, use_modifiers=False):
+    activate(operation)
     bpy.ops.object.duplicate()
 
     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
 
-    co = bpy.context.active_object
+    currentObject = bpy.context.active_object
 
-    if co.type == 'FONT':  # support for text objects is only and only here, just convert them to curves.
+    if currentObject.type == 'FONT':  # support for text objects is only and only here, just convert them to curves.
         bpy.ops.object.convert(target='CURVE', keep_original=False)
-    co.data.dimensions = '3D'
-    co.data.bevel_depth = 0
-    co.data.extrude = 0
+    currentObject.data.dimensions = '3D'
+    currentObject.data.bevel_depth = 0
+    currentObject.data.extrude = 0
 
     # first, convert to mesh to avoid parenting issues with hooks, then apply locrotscale.
     bpy.ops.object.convert(target='MESH', keep_original=False)
 
     if use_modifiers:
-        eval_object = co.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        eval_object = currentObject.evaluated_get(bpy.context.evaluated_depsgraph_get())
         newmesh = bpy.data.meshes.new_from_object(eval_object)
-        oldmesh = co.data
-        co.modifiers.clear()
-        co.data = newmesh
+        oldmesh = currentObject.data
+        currentObject.modifiers.clear()
+        currentObject.data = newmesh
         bpy.data.meshes.remove(oldmesh)
 
     try:
