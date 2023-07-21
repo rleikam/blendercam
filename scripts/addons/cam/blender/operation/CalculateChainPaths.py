@@ -1,8 +1,12 @@
-from cam import gcodepath, utils
-from cam.ops import getChainOperations
+import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty
-import bpy
+
+from cam import gcodepath, utils
+from cam.ops import getChainOperations
+
+from .PlayNotificationAudioSample import *
+from ..property.NotificationProperties import *
 
 class CalculateChainPaths(Operator):
     """calculate a chain and export the gcode alltogether. """
@@ -28,4 +32,11 @@ class CalculateChainPaths(Operator):
             meshes.append(bpy.data.objects[camPathName].data)
 
         gcodepath.exportGcodePath(chain.filename, meshes, chainOperations)
+
+        notificationProperties : NotificationProperties = context.scene.notification
+
+        if notificationProperties.enableAudioPlayback:
+            playAudioNotificationFunctionStatement = f"bpy.ops.{PlayNotificationAudioSample.bl_idname}()"
+            eval(playAudioNotificationFunctionStatement)
+        
         return {'FINISHED'}

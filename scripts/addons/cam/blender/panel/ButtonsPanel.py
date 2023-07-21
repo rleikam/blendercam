@@ -6,6 +6,7 @@ class ButtonsPanel:
     bl_region_type = 'WINDOW'
     bl_context = "render"
     always_show_panel = True
+    bl_options = {"DEFAULT_CLOSED"}
 
     @classmethod
     def poll(cls, context):

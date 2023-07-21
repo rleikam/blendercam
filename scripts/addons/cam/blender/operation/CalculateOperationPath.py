@@ -1,8 +1,12 @@
-from cam import gcodepath, utils
-from ...exception import CamException
+import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty
-import bpy
+
+from cam import gcodepath, utils
+from ...exception import CamException
+
+from .PlayNotificationAudioSample import *
+from ..property.NotificationProperties import *
 
 class CalculateOperationPath(Operator):
     """calculate CAM paths"""
@@ -60,5 +64,11 @@ class CalculateOperationPath(Operator):
         coll = bpy.data.collections.get('RigidBodyWorld')
         if coll:
             bpy.data.collections.remove(coll)
+
+        notificationProperties : NotificationProperties = context.scene.notification
+
+        if notificationProperties.enableAudioPlayback:
+            playAudioNotificationFunctionStatement = f"bpy.ops.{PlayNotificationAudioSample.bl_idname}()"
+            eval(playAudioNotificationFunctionStatement)
 
         return {'FINISHED'}

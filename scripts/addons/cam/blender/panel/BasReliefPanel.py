@@ -11,6 +11,8 @@ class BasReliefPanel(Panel):
 	bl_region_type = "WINDOW"
 	bl_context = "render"
 
+	bl_options = {"DEFAULT_CLOSED"}
+
 	COMPAT_ENGINES = {'BLENDERCAM_RENDER'}
 
 	@classmethod

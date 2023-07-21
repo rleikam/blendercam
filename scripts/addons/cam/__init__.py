@@ -66,6 +66,7 @@ classes = [
     OperationList,
     ChainList,
     OperationReferenceProperties,
+    NotificationProperties,
     ChainProperties,
     MachineProperties,
     ImportProperties,
@@ -84,6 +85,7 @@ classes = [
     SlicePanel,
     CurveToolsPanel,
     CurveCreatorPanel,
+    NotificationPanel,
     CustomPanel,
     ImportGCode,
     CalculatePathsInBackground,
@@ -125,7 +127,7 @@ classes = [
     CamCurveRemoveDoubles,
     CamMeshGetPockets,
     CamMapObjectToTarget,
-
+    PlayNotificationAudioSample,
     CamSineCurve,
     CamLissajousCurve,
     CamHypotrochoidCurve,
@@ -155,13 +157,11 @@ classes = [
 def loadIcons():
     previewCollection = bpy.utils.previews.new()
     iconDirectory = os.path.join(os.path.dirname(__file__), "icons")
-
+    
     # load a preview thumbnail of a file and store in the previews collection
     for fileName in os.listdir(iconDirectory):
         path = PurePath(fileName)
-        suffixLength = len(path.suffix)
-        nameLength = len(fileName)
-        nameWithoutSuffix = path.name[: nameLength - suffixLength] 
+        nameWithoutSuffix = path.stem
         previewCollection.load(nameWithoutSuffix, os.path.join(iconDirectory, fileName), 'IMAGE')
 
     bpy.types.Scene.previewCollection =  previewCollection
@@ -197,6 +197,10 @@ def register():
     scene.cam_slice = PointerProperty(type=SliceObjectProperties)
 
     scene.intarsion = PointerProperty(type=IntarsionProperties)
+
+    scene.notification = PointerProperty(type = NotificationProperties)
+
+    scene.audioSampleDirectory = os.path.join(os.path.dirname(__file__), "audio")
 
 def unregister():
     for panels in classes:
